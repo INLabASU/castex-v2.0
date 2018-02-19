@@ -7,29 +7,29 @@
     tools:context="info.jkjensen.castex_protocol.MainActivity">
 
     <Button
-        android:id="@+id/take"
+        android:id="@+id/startStreamButton"
         app:layout_constraintTop_toTopOf="parent"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Take"/>
+        android:text="start stream"/>
 
     <Button
-        android:id="@+id/open"
-        app:layout_constraintTop_toBottomOf="@id/take"
+        android:id="@+id/closeStreamButton"
+        app:layout_constraintLeft_toRightOf="@id/startStreamButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="open"/>
+        android:text="close stream"/>
+
+    <!--<SurfaceView-->
+        <!--android:id="@+id/surface_view_fake"-->
+        <!--android:layout_width="match_parent"-->
+        <!--android:layout_height="wrap_content"-->
+        <!--app:layout_constraintTop_toBottomOf="@id/start"/>-->
 
     <ImageView
         android:id="@+id/myimageview"
-        app:layout_constraintTop_toBottomOf="@id/open"
+        app:layout_constraintTop_toBottomOf="@id/startStreamButton"
         android:layout_width="match_parent"
-        android:layout_height="200dp" />
-
-    <SurfaceView
-        android:id="@+id/surface_view_fake"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        app:layout_constraintTop_toBottomOf="@id/open"/>
+        android:layout_height="400dp" />
 
 </android.support.constraint.ConstraintLayout>
