@@ -18,7 +18,6 @@ import android.util.Log
 import android.view.WindowManager
 import kotlinx.android.synthetic.main.activity_main.*
 import org.jetbrains.anko.mediaProjectionManager
-import java.io.File
 import java.io.FileOutputStream
 import java.lang.Thread.sleep
 import java.util.*
@@ -27,33 +26,35 @@ import java.util.*
 class MainActivity : AppCompatActivity() {
 
     companion object {
-        val TAG ="info.jkjensen.castex"
-        val MEDIA_PROJECTION_RESULT_CODE = "mediaprojectionresultcode"
-        val MEDIA_PROJECTION_RESULT_DATA = "mediaprojectionresultdata"
-        private val REQUEST_MEDIA_PROJECTION_CODE = 101
-        private val REQUEST_OVERLAY_CODE = 201
-        private val REQUEST_FILE_CODE = 301
+        const val TAG ="info.jkjensen.castex"
+        private const val REQUEST_MEDIA_PROJECTION_CODE = 101
+        private const val REQUEST_OVERLAY_CODE = 201
+        private const val REQUEST_FILE_CODE = 301
     }
 
-    var filepath:String? = null
-    var images:ArrayList<Bitmap> = arrayListOf()
-    var imageFile:File? = null
-    val REQUEST_CODE_EXTERNAL_STORAGE_PERMISSION:Int = 2
-    var frameNumber:Int = 1
-    var metrics:DisplayMetrics? = null
-    var imageReader:ImageReader? = null
-    var fos:FileOutputStream? = null
-    var startTime = System.currentTimeMillis()
+    // Image FIFO buffer for capture -> stream
+    private var images:ArrayList<Bitmap> = arrayListOf()
+    // Display metrics for screen attributes
+    private var metrics:DisplayMetrics? = null
+    // Used to feed captured frames to our buffer
+    private var imageReader:ImageReader? = null
+    // Used for writing stats to a file while debugging
+    private var fos:FileOutputStream? = null
+    // Used to track timestamps during execution
+    private var startTime = System.currentTimeMillis()
+    /**
+     * Tracks the previous bitmap displayed so that it may be recycled immediately when it is no
+     * longer needed
+     */
+    private var prevBitmap:Bitmap? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContentView(R.layout.activity_main)
         startStreamButton.setOnClickListener {
-            Log.d(TAG, "Clicked")
 
-            // TODO: Fix overlay versioning so that all android versions are supported.
-
+            // Android M+ require us to explicitly ask for overlay permissions.
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
                 val overlayIntent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
                 overlayIntent.data = Uri.parse("package:" + packageName)
@@ -69,18 +70,16 @@ class MainActivity : AppCompatActivity() {
             fos?.close()
         }
 
+        /**
+         * Explicitly ask for permission to read/write (only needed for debugging at this point).
+         */
         ActivityCompat.requestPermissions(this,
                 arrayOf(WRITE_EXTERNAL_STORAGE, READ_EXTERNAL_STORAGE),
                 REQUEST_FILE_CODE)
     }
 
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if(requestCode == REQUEST_CODE_EXTERNAL_STORAGE_PERMISSION){
-        }
-    }
-
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        // If result is from media projection, we can begin capturing.
         if (requestCode == REQUEST_MEDIA_PROJECTION_CODE) {
             super.onActivityResult(requestCode, resultCode, data)
             val mediaProjection = mediaProjectionManager.getMediaProjection(resultCode, data)
@@ -133,13 +132,18 @@ class MainActivity : AppCompatActivity() {
                 }
             }).start()
         } else if(requestCode == REQUEST_OVERLAY_CODE){
+            /* If the result is from the overlay request, we must now request the media projection
+                permissions
+             */
             startActivityForResult(
                     mediaProjectionManager.createScreenCaptureIntent(),
                     REQUEST_MEDIA_PROJECTION_CODE)
         }
     }
 
-    var prevBitmap:Bitmap? = null
+    /**
+     * Pops the oldest frame from the FIFO buffer and displays it on the imageview.
+     */
     @Synchronized private fun openScreenshot() {
         if(images.isEmpty()){
             Log.d(TAG, "Image array is empty")
