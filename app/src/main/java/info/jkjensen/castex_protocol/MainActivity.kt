@@ -8,6 +8,7 @@ import android.graphics.PixelFormat
 import android.media.Image
 import android.media.ImageReader
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.support.v4.app.ActivityCompat
@@ -52,7 +53,8 @@ class MainActivity : AppCompatActivity() {
             Log.d(TAG, "Clicked")
 
             // TODO: Fix overlay versioning so that all android versions are supported.
-            if(!Settings.canDrawOverlays(this)) {
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
                 val overlayIntent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
                 overlayIntent.data = Uri.parse("package:" + packageName)
                 startActivityForResult(overlayIntent, REQUEST_OVERLAY_CODE)
