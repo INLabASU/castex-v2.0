@@ -4,7 +4,7 @@ import numpy as np
 timingFile = open('screenCaptureTiming.txt', 'r')
 times = timingFile.read().split('\n')
 times = filter(lambda x: x is not '', times)
-# print(times)
+print('Number of timestamps recorded: ' + str(len(times)))
 
 # Convert to floats
 timesflt = map(float, times) 
@@ -22,9 +22,11 @@ plt.title('Timestamps of Screen Capture Over Time')
 plt.xlabel('timestamp number')
 plt.ylabel('time to next capture')
 
-plt.show()
 # print(timesflt)
 avgTimeBetweenTS = reduce((lambda x, y: x + y), diffs)
 avgTimeBetweenTS = avgTimeBetweenTS/len(diffs)
 print('Average time between timestamps: ' +str(avgTimeBetweenTS))
+
+plt.text(50, 56, 'Number of timestamps recorded: ' + str(len(times)) + '\n' +'Average time between timestamps: ' +str(avgTimeBetweenTS), fontsize=15)
+plt.show()
 

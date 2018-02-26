@@ -2,7 +2,9 @@ package info.jkjensen.castex_protocol
 
 import android.Manifest.permission.READ_EXTERNAL_STORAGE
 import android.Manifest.permission.WRITE_EXTERNAL_STORAGE
+import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.graphics.Bitmap
 import android.graphics.PixelFormat
 import android.media.Image
@@ -20,6 +22,9 @@ import kotlinx.android.synthetic.main.activity_main.*
 import org.jetbrains.anko.mediaProjectionManager
 import java.io.FileOutputStream
 import java.lang.Thread.sleep
+import java.net.InetAddress
+import java.net.InetSocketAddress
+import java.net.MulticastSocket
 import java.util.*
 
 
@@ -33,7 +38,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     // Image FIFO buffer for capture -> stream
-    private var images:ArrayList<Bitmap> = arrayListOf()
+    private var images:ArrayList<RTEFrame> = arrayListOf()
     // Display metrics for screen attributes
     private var metrics:DisplayMetrics? = null
     // Used to feed captured frames to our buffer
@@ -42,16 +47,34 @@ class MainActivity : AppCompatActivity() {
     private var fos:FileOutputStream? = null
     // Used to track timestamps during execution
     private var startTime = System.currentTimeMillis()
+    // Socket used as a datastream
+    private var rteSock = MulticastSocket(null)
+    private var group1: InetAddress? = null
+
+
     /**
      * Tracks the previous bitmap displayed so that it may be recycled immediately when it is no
      * longer needed
      */
-    private var prevBitmap:Bitmap? = null
+    private var prevImage:RTEFrame? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContentView(R.layout.activity_main)
+
+        val sharedPreferences: SharedPreferences = getSharedPreferences("appConfig", Context.MODE_PRIVATE)
+        val editor: SharedPreferences.Editor = sharedPreferences.edit()
+        editor.putBoolean(CastexPreferences.KEY_DEBUG, CastexPreferences.DEBUG)
+        editor.putBoolean(CastexPreferences.KEY_MULTICAST, CastexPreferences.MULTICAST)
+        editor.putBoolean(CastexPreferences.KEY_TCP, CastexPreferences.TCP)
+        editor.putInt(CastexPreferences.KEY_PORT_OUT, CastexPreferences.PORT_OUT)
+        editor.apply()
+
+        rteSock.reuseAddress = true
+        rteSock.bind(InetSocketAddress(CastexPreferences.PORT_OUT))
+        group1 = InetAddress.getByName("192.168.43.110") // Samsung Galaxy S7
+
         startStreamButton.setOnClickListener {
 
             // Android M+ require us to explicitly ask for overlay permissions.
@@ -112,7 +135,7 @@ class MainActivity : AppCompatActivity() {
                     val rowPadding = rowStride - pixelStride * image!!.width
                     bitmap = Bitmap.createBitmap(image!!.width + rowPadding/pixelStride, image!!.height, Bitmap.Config.ARGB_8888)
                     bitmap!!.copyPixelsFromBuffer(buffer)
-                    images.add(bitmap!!)
+                    images.add(RTEFrame(bitmap!!))
 
 
                 } catch (e: Exception) {
@@ -126,7 +149,7 @@ class MainActivity : AppCompatActivity() {
 
             Thread(Runnable {
                 while (true) {
-                    sleep(20)
+                    sleep(5)
                     openScreenshot()
 
                 }
@@ -145,6 +168,7 @@ class MainActivity : AppCompatActivity() {
      * Pops the oldest frame from the FIFO buffer and displays it on the imageview.
      */
     @Synchronized private fun openScreenshot() {
+        var currentImage: RTEFrame? = null
         if(images.isEmpty()){
             Log.d(TAG, "Image array is empty")
             return
@@ -154,12 +178,15 @@ class MainActivity : AppCompatActivity() {
                 return@Runnable
             }
             Log.d(TAG, "Updating imageview")
-            val bitmap = images.removeAt(0)
-            myimageview.setImageBitmap(bitmap)
-            if(prevBitmap != null){
-                prevBitmap!!.recycle()
+            currentImage = images.removeAt(0)
+            myimageview.setImageBitmap(currentImage?.bitmap)
+            if(prevImage != null){
+                prevImage!!.bitmap.recycle()
             }
-            prevBitmap = bitmap
+            prevImage = currentImage
         })
+
+        // Send out frames on UDP socket.
+        rteSock.send(RTEPacketizer.packetize(currentImage!!, group1!!))
     }
 }
