@@ -10,6 +10,7 @@ import android.graphics.PixelFormat
 import android.media.Image
 import android.media.ImageReader
 import android.net.Uri
+import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
@@ -22,6 +23,7 @@ import kotlinx.android.synthetic.main.activity_main.*
 import org.jetbrains.anko.mediaProjectionManager
 import java.io.FileOutputStream
 import java.lang.Thread.sleep
+import java.net.DatagramPacket
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.MulticastSocket
@@ -48,8 +50,9 @@ class MainActivity : AppCompatActivity() {
     // Used to track timestamps during execution
     private var startTime = System.currentTimeMillis()
     // Socket used as a datastream
-    private var rteSock = MulticastSocket(null)
+    private var rteSock:MulticastSocket? = null
     private var group1: InetAddress? = null
+    private var fid = 0
 
 
     /**
@@ -71,9 +74,19 @@ class MainActivity : AppCompatActivity() {
         editor.putInt(CastexPreferences.KEY_PORT_OUT, CastexPreferences.PORT_OUT)
         editor.apply()
 
-        rteSock.reuseAddress = true
-        rteSock.bind(InetSocketAddress(CastexPreferences.PORT_OUT))
-        group1 = InetAddress.getByName("192.168.43.110") // Samsung Galaxy S7
+
+        // Acquire a multicast lock (used so the device can receive packets not explicitly addressed
+        // to it.
+        val wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+        val multicastLock = wifiManager.createMulticastLock("multicastLock")
+        multicastLock.setReferenceCounted(false)
+        multicastLock.acquire()
+
+        rteSock = MulticastSocket()
+
+        rteSock?.reuseAddress = true
+//        rteSock?.bind(InetSocketAddress(CastexPreferences.PORT_OUT))
+        group1 = InetAddress.getByName("192.168.43.15") // Linux Box
 
         startStreamButton.setOnClickListener {
 
@@ -127,7 +140,7 @@ class MainActivity : AppCompatActivity() {
                     val buffer = planes[0].buffer ?: throw Exception("Failed to get image buffer")
 
                     // For debugging, write timestamps to a text file for external timing analysis
-                    fos!!.write(((System.currentTimeMillis() - startTime).toString() + "\n").toByteArray())
+//                    fos?.write(((System.currentTimeMillis() - startTime).toString() + "\n").toByteArray())
 
                     buffer.rewind()
                     val pixelStride = planes[0].pixelStride
@@ -135,7 +148,9 @@ class MainActivity : AppCompatActivity() {
                     val rowPadding = rowStride - pixelStride * image!!.width
                     bitmap = Bitmap.createBitmap(image!!.width + rowPadding/pixelStride, image!!.height, Bitmap.Config.ARGB_8888)
                     bitmap!!.copyPixelsFromBuffer(buffer)
-                    images.add(RTEFrame(bitmap!!))
+//                    Log.d(TAG, "Adding image with fid: $fid")
+                    images.add(RTEFrame(bitmap!!, fid))
+                    fid++
 
 
                 } catch (e: Exception) {
@@ -173,13 +188,13 @@ class MainActivity : AppCompatActivity() {
             Log.d(TAG, "Image array is empty")
             return
         }
+        currentImage = images.removeAt(0)
         runOnUiThread(Runnable {
-            if(images.isEmpty()){
+            if(currentImage.bitmap.isRecycled){
                 return@Runnable
             }
-            Log.d(TAG, "Updating imageview")
-            currentImage = images.removeAt(0)
-            myimageview.setImageBitmap(currentImage?.bitmap)
+//            Log.d(TAG, "Updating imageview")
+            myimageview.setImageBitmap(currentImage.bitmap)
             if(prevImage != null){
                 prevImage!!.bitmap.recycle()
             }
@@ -187,6 +202,11 @@ class MainActivity : AppCompatActivity() {
         })
 
         // Send out frames on UDP socket.
-        rteSock.send(RTEPacketizer.packetize(currentImage!!, group1!!))
+        val packets:ArrayList<DatagramPacket> = RTEPacketizer.packetize(currentImage, group1!!, RTEProtocol.RTE_STANDARD_PACKET_LENGTH)
+        for(p in packets){
+
+            rteSock?.send(p)
+        }
+        Log.d(TAG, "Got packets!")
     }
 }

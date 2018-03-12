@@ -26,6 +26,6 @@ class CastexPreferences{
         public val DEBUG = false
 
         val KEY_PORT_OUT = "port out"
-        val PORT_OUT = 1234
+        val PORT_OUT = RTEProtocol.DEFAULT_PORT
     }
 }
