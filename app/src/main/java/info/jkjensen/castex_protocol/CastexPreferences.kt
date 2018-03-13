@@ -1,5 +1,7 @@
 package info.jkjensen.castex_protocol
 
+import rte.RTEProtocol
+
 /**
  * Created by jk on 10/31/17.
  */

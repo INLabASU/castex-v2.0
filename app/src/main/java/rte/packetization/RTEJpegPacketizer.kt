@@ -1,6 +1,10 @@
-package info.jkjensen.castex_protocol
+package rte.packetization
 
 import android.graphics.Bitmap
+import info.jkjensen.castex_protocol.CastexPreferences
+import rte.RTEFrame
+import rte.RTEPacket
+import rte.RTEProtocol
 import java.io.ByteArrayOutputStream
 import java.net.DatagramPacket
 import java.net.InetAddress
@@ -9,9 +13,9 @@ import java.net.InetAddress
  * Created by jk on 2/26/18.
  * Packetizes frame data into UDP packets for transmission to receiving devices.
  */
-class RTEPacketizer{
+open class RTEJpegPacketizer{
 
-    companion object {
+    companion object: RTEPacketizer {
 
         /**
          * Packetizes the frame into a list of packets to be sent to the receiver.
@@ -22,7 +26,7 @@ class RTEPacketizer{
          * @param packetSize The desired packet size. This is variable to allow tuning of packet
          * size for increased performance.
          */
-        fun packetize(rteFrame:RTEFrame, group: InetAddress, packetSize:Int): ArrayList<DatagramPacket> {
+        override fun packetize(rteFrame: RTEFrame, group: InetAddress, packetSize:Int): ArrayList<DatagramPacket> {
             val baos = ByteArrayOutputStream()
             rteFrame.bitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos)
             val outputData = baos.toByteArray()

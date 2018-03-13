@@ -1,5 +1,7 @@
 package info.jkjensen.castex_protocol
 
+import rte.RTEFrame
+import rte.RTEProtocol
 import android.Manifest.permission.READ_EXTERNAL_STORAGE
 import android.Manifest.permission.WRITE_EXTERNAL_STORAGE
 import android.content.Context
@@ -19,15 +21,14 @@ import android.support.v7.app.AppCompatActivity
 import android.util.DisplayMetrics
 import android.util.Log
 import android.view.WindowManager
+import rte.packetization.RTEJpegPacketizer
 import kotlinx.android.synthetic.main.activity_main.*
 import org.jetbrains.anko.mediaProjectionManager
 import java.io.FileOutputStream
 import java.lang.Thread.sleep
 import java.net.DatagramPacket
 import java.net.InetAddress
-import java.net.InetSocketAddress
 import java.net.MulticastSocket
-import java.util.*
 
 
 class MainActivity : AppCompatActivity() {
@@ -51,15 +52,15 @@ class MainActivity : AppCompatActivity() {
     private var startTime = System.currentTimeMillis()
     // Socket used as a datastream
     private var rteSock:MulticastSocket? = null
+    // Sender address TODO: Make this address dynamic.
     private var group1: InetAddress? = null
+    // ID of the current transmitting frame.
     private var fid = 0
-
-
     /**
      * Tracks the previous bitmap displayed so that it may be recycled immediately when it is no
      * longer needed
      */
-    private var prevImage:RTEFrame? = null
+    private var prevImage: RTEFrame? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -183,7 +184,7 @@ class MainActivity : AppCompatActivity() {
      * Pops the oldest frame from the FIFO buffer and displays it on the imageview.
      */
     @Synchronized private fun openScreenshot() {
-        var currentImage: RTEFrame? = null
+        var currentImage: RTEFrame?
         if(images.isEmpty()){
             Log.d(TAG, "Image array is empty")
             return
@@ -193,7 +194,6 @@ class MainActivity : AppCompatActivity() {
             if(currentImage.bitmap.isRecycled){
                 return@Runnable
             }
-//            Log.d(TAG, "Updating imageview")
             myimageview.setImageBitmap(currentImage.bitmap)
             if(prevImage != null){
                 prevImage!!.bitmap.recycle()
@@ -202,11 +202,10 @@ class MainActivity : AppCompatActivity() {
         })
 
         // Send out frames on UDP socket.
-        val packets:ArrayList<DatagramPacket> = RTEPacketizer.packetize(currentImage, group1!!, RTEProtocol.RTE_STANDARD_PACKET_LENGTH)
+        val packets:ArrayList<DatagramPacket> = RTEJpegPacketizer.packetize(currentImage, group1!!, RTEProtocol.RTE_STANDARD_PACKET_LENGTH)
         for(p in packets){
 
             rteSock?.send(p)
         }
-        Log.d(TAG, "Got packets!")
     }
 }

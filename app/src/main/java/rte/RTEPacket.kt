@@ -1,26 +1,27 @@
-package info.jkjensen.castex_protocol
+package rte
 
 import java.io.ByteArrayOutputStream
 import java.util.*
 
 /**
  * Created by jk on 3/2/18.
+ * This class represents a packet according to the RTE Protocol.
  */
-data class RTEPacket(var header:RTEPacketHeader = RTEPacketHeader(),
-                         var fid:Int = -1,
-                         var totalLength:Int = -1,
-                         var pid:Int = -1,
-                         var totalPackets:Int = -1,
-                         var offset:Int = -1,
-                         var length:Int = -1,
-                         var data: ByteArray = ByteArray(0)) {
+data class RTEPacket(var header: RTEPacketHeader = RTEPacketHeader(),
+                     var fid:Int = -1,
+                     var totalLength:Int = -1,
+                     var pid:Int = -1,
+                     var totalPackets:Int = -1,
+                     var offset:Int = -1,
+                     var length:Int = -1,
+                     var data: ByteArray = ByteArray(0)) {
 
     companion object {
         const val TAG = "RTEPacket"
     }
 
     /**
-     * Prepares the data in this packet to be sent over the network.
+     * Prepares the data in this packet to be sent over the network as a C-structured byte stream.
      */
     fun serialize(): ByteArray? {
         val outputStream = ByteArrayOutputStream()
@@ -78,9 +79,9 @@ data class RTEPacket(var header:RTEPacketHeader = RTEPacketHeader(),
         // Payload data
         outputStream.write(this.data)
 
-
         // Print the stream for debugging.
 //        outputStream.printDump()
+
         return outputStream.toByteArray()
     }
 
