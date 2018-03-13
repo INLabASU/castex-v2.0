@@ -79,7 +79,7 @@ class MainActivity : AppCompatActivity() {
 
         rteSock = MulticastSocket()
         rteSock?.reuseAddress = true
-        group1 = InetAddress.getByName("192.168.43.15") // Linux Box
+        group1 = InetAddress.getByName("192.168.43.172") // Linux Box
 
         val sessionBuilder = RTESessionBuilder()
         sessionBuilder.setSocket(rteSock!!)
@@ -103,6 +103,7 @@ class MainActivity : AppCompatActivity() {
 
         closeStreamButton.setOnClickListener{
             fos?.close()
+            imageReader?.close()
         }
 
         /**
@@ -148,7 +149,8 @@ class MainActivity : AppCompatActivity() {
                     bitmap = Bitmap.createBitmap(image!!.width + rowPadding/pixelStride, image!!.height, Bitmap.Config.ARGB_8888)
                     bitmap!!.copyPixelsFromBuffer(buffer)
 //                    Log.d(TAG, "Adding image with fid: $fid")
-                    images.add(RTEFrame(bitmap!!, fid))
+                    val timestamp = System.currentTimeMillis()
+                    images.add(RTEFrame(bitmap!!, fid, timestamp))
                     fid++
 
 
@@ -184,7 +186,7 @@ class MainActivity : AppCompatActivity() {
     @Synchronized private fun openScreenshot() {
         var currentImage: RTEFrame?
         if(images.isEmpty()){
-            Log.d(TAG, "Image array is empty")
+//            Log.d(TAG, "Image array is empty")
             return
         }
         currentImage = images.removeAt(0)
@@ -192,7 +194,7 @@ class MainActivity : AppCompatActivity() {
             if(currentImage.bitmap.isRecycled){
                 return@Runnable
             }
-            myimageview.setImageBitmap(currentImage.bitmap)
+//            myimageview.setImageBitmap(currentImage.bitmap)
             if(prevImage != null){
                 prevImage!!.bitmap.recycle()
             }
