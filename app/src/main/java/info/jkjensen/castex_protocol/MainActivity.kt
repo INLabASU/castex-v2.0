@@ -24,6 +24,7 @@ import android.view.WindowManager
 import rte.packetization.RTEJpegPacketizer
 import kotlinx.android.synthetic.main.activity_main.*
 import org.jetbrains.anko.mediaProjectionManager
+import rte.session.RTESessionBuilder
 import java.io.FileOutputStream
 import java.lang.Thread.sleep
 import java.net.DatagramPacket
@@ -67,14 +68,7 @@ class MainActivity : AppCompatActivity() {
 
         setContentView(R.layout.activity_main)
 
-        val sharedPreferences: SharedPreferences = getSharedPreferences("appConfig", Context.MODE_PRIVATE)
-        val editor: SharedPreferences.Editor = sharedPreferences.edit()
-        editor.putBoolean(CastexPreferences.KEY_DEBUG, CastexPreferences.DEBUG)
-        editor.putBoolean(CastexPreferences.KEY_MULTICAST, CastexPreferences.MULTICAST)
-        editor.putBoolean(CastexPreferences.KEY_TCP, CastexPreferences.TCP)
-        editor.putInt(CastexPreferences.KEY_PORT_OUT, CastexPreferences.PORT_OUT)
-        editor.apply()
-
+        this.setupSharedPreferences()
 
         // Acquire a multicast lock (used so the device can receive packets not explicitly addressed
         // to it.
@@ -84,10 +78,14 @@ class MainActivity : AppCompatActivity() {
         multicastLock.acquire()
 
         rteSock = MulticastSocket()
-
         rteSock?.reuseAddress = true
-//        rteSock?.bind(InetSocketAddress(CastexPreferences.PORT_OUT))
         group1 = InetAddress.getByName("192.168.43.15") // Linux Box
+
+        val sessionBuilder = RTESessionBuilder()
+        sessionBuilder.setSocket(rteSock!!)
+                .setMulticastLock(multicastLock)
+                .setReceiverAddress(group1!!)
+
 
         startStreamButton.setOnClickListener {
 
@@ -207,5 +205,15 @@ class MainActivity : AppCompatActivity() {
 
             rteSock?.send(p)
         }
+    }
+
+    private fun setupSharedPreferences(){
+        val sharedPreferences: SharedPreferences = getSharedPreferences("appConfig", Context.MODE_PRIVATE)
+        val editor: SharedPreferences.Editor = sharedPreferences.edit()
+        editor.putBoolean(CastexPreferences.KEY_DEBUG, CastexPreferences.DEBUG)
+        editor.putBoolean(CastexPreferences.KEY_MULTICAST, CastexPreferences.MULTICAST)
+        editor.putBoolean(CastexPreferences.KEY_TCP, CastexPreferences.TCP)
+        editor.putInt(CastexPreferences.KEY_PORT_OUT, CastexPreferences.PORT_OUT)
+        editor.apply()
     }
 }
