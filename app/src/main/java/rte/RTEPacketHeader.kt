@@ -1,5 +1,7 @@
 package rte
 
+import java.io.Serializable
+
 /**
  * Created by jk on 3/2/18.
  */

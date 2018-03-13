@@ -6,7 +6,7 @@ package rte
  */
 class RTEProtocol {
     companion object {
-        const val RTE_STANDARD_PACKET_LENGTH = 256
+        const val RTE_STANDARD_PACKET_LENGTH = 1024
         const val DEFAULT_PACKET_SIZE = 1024
         const val PACKET_MAGIC:Long = 0x87654321
 
