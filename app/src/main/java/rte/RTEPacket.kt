@@ -1,6 +1,12 @@
 package rte
 
+import android.util.Log
+import info.jkjensen.castex_protocol.printDump
 import java.io.ByteArrayOutputStream
+import java.io.ObjectOutputStream
+import java.io.Serializable
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import java.util.*
 
 /**
@@ -14,6 +20,7 @@ data class RTEPacket(var header: RTEPacketHeader = RTEPacketHeader(),
                      var totalPackets:Int = -1,
                      var offset:Int = -1,
                      var length:Int = -1,
+                     var timestamp:Long = -1,
                      var data: ByteArray = ByteArray(0)) {
 
     companion object {
@@ -24,64 +31,113 @@ data class RTEPacket(var header: RTEPacketHeader = RTEPacketHeader(),
      * Prepares the data in this packet to be sent over the network as a C-structured byte stream.
      */
     fun serialize(): ByteArray? {
+        val starttime = System.currentTimeMillis()
         val outputStream = ByteArrayOutputStream()
 
         // Header magic, 32 bits
-        outputStream.write(byteArrayOf(((this.header.magic shr 24) and 0xFF).toByte(),
-                                       ((this.header.magic shr 16) and 0xFF).toByte(),
-                                       ((this.header.magic shr 8) and 0xFF).toByte(),
-                                        (this.header.magic and 0xFF).toByte()))
+        outputStream.write(byteArrayOf(
+                (this.header.magic and 0xFF).toByte(),
+                ((this.header.magic shr 8) and 0xFF).toByte(),
+                ((this.header.magic shr 16) and 0xFF).toByte(),
+                ((this.header.magic shr 24) and 0xFF).toByte()
+        ))
 
         // Stream type, 16 bits
-        outputStream.write(byteArrayOf((this.header.type shr 8 and 0xFF).toByte(),
-                                       (this.header.type and 0xFF).toByte()))
+        outputStream.write(byteArrayOf(
+                (this.header.type and 0xFF).toByte(),
+                (this.header.type shr 8 and 0xFF).toByte()
+        ))
 
         // Packet length, including header, 16 bits
-        outputStream.write(byteArrayOf(((this.header.length shr 8) and 0xFF).toByte(),
-                                           (this.header.length and 0xFF).toByte()))
+        outputStream.write(byteArrayOf(
+                (this.header.length and 0xFF).toByte(),
+                ((this.header.length shr 8) and 0xFF).toByte()
+        ))
 
         // frame ID, 32 bits
-        outputStream.write(byteArrayOf(((this.fid shr 24) and 0xFF).toByte(),
-                ((this.fid shr 16) and 0xFF).toByte(),
+        outputStream.write(byteArrayOf(
+                (this.fid and 0xFF).toByte(),
                 ((this.fid shr 8) and 0xFF).toByte(),
-                (this.fid and 0xFF).toByte()))
+                ((this.fid shr 16) and 0xFF).toByte(),
+                ((this.fid shr 24) and 0xFF).toByte()
+        ))
 
         // total length of this packet frame, 32 bits
-        outputStream.write(byteArrayOf(((this.totalLength shr 24) and 0xFF).toByte(),
-                ((this.totalLength shr 16) and 0xFF).toByte(),
+        outputStream.write(byteArrayOf(
+                (this.totalLength and 0xFF).toByte(),
                 ((this.totalLength shr 8) and 0xFF).toByte(),
-                (this.totalLength and 0xFF).toByte()))
+                ((this.totalLength shr 16) and 0xFF).toByte(),
+                ((this.totalLength shr 24) and 0xFF).toByte()
+        ))
 
         // packet ID, 32 bits
-        outputStream.write(byteArrayOf(((this.pid shr 24) and 0xFF).toByte(),
-                ((this.pid shr 16) and 0xFF).toByte(),
+        outputStream.write(byteArrayOf(
+                (this.pid and 0xFF).toByte(),
                 ((this.pid shr 8) and 0xFF).toByte(),
-                (this.pid and 0xFF).toByte()))
+                ((this.pid shr 16) and 0xFF).toByte(),
+                ((this.pid shr 24) and 0xFF).toByte()
+        ))
 
         // total number of packets, 32 bits
-        outputStream.write(byteArrayOf(((this.totalPackets shr 24) and 0xFF).toByte(),
-                ((this.totalPackets shr 16) and 0xFF).toByte(),
+        outputStream.write(byteArrayOf(
+                (this.totalPackets and 0xFF).toByte(),
                 ((this.totalPackets shr 8) and 0xFF).toByte(),
-                (this.totalPackets and 0xFF).toByte()))
+                ((this.totalPackets shr 16) and 0xFF).toByte(),
+                ((this.totalPackets shr 24) and 0xFF).toByte()
+        ))
 
         // Offset of this packet within the frame, 32 bits
-        outputStream.write(byteArrayOf(((this.offset shr 24) and 0xFF).toByte(),
-                ((this.offset shr 16) and 0xFF).toByte(),
+        outputStream.write(byteArrayOf(
+                (this.offset and 0xFF).toByte(),
                 ((this.offset shr 8) and 0xFF).toByte(),
-                (this.offset and 0xFF).toByte()))
+                ((this.offset shr 16) and 0xFF).toByte(),
+                ((this.offset shr 24) and 0xFF).toByte()
+        ))
+
+        outputStream.write(byteArrayOf(
+                (this.timestamp and 0xFF).toByte(),
+                ((this.timestamp shr 8) and 0xFF).toByte(),
+                ((this.timestamp shr 16) and 0xFF).toByte(),
+                ((this.timestamp shr 24) and 0xFF).toByte()
+        ))
 
         // Payload length of this packet
-        outputStream.write(byteArrayOf(((this.length shr 24) and 0xFF).toByte(),
-                ((this.length shr 16) and 0xFF).toByte(),
+        outputStream.write(byteArrayOf(
+                (this.length and 0xFF).toByte(),
                 ((this.length shr 8) and 0xFF).toByte(),
-                (this.length and 0xFF).toByte()))
+                ((this.length shr 16) and 0xFF).toByte(),
+                ((this.length shr 24) and 0xFF).toByte()
+        ))
 
         // Payload data
         outputStream.write(this.data)
 
+//        val bb = ByteBuffer.wrap(this.data)
+//        bb.order(ByteOrder.LITTLE_ENDIAN)
+//        while(bb.hasRemaining()){
+//            try {
+//                if(bb.remaining() > 4){
+//                    val x = bb.getInt()
+//                    outputStream.write(byteArrayOf(
+//                            (x and 0xFF).toByte(),
+//                            ((x shr 8) and 0xFF).toByte(),
+//                            ((x shr 16) and 0xFF).toByte(),
+//                            ((x shr 24) and 0xFF).toByte()))
+//                }else{
+//                    output
+//                }
+//            }catch (e:Exception){
+//                break
+//            }
+//        }
+
+//        val oos = ObjectOutputStream(outputStream)
+//        oos.writeObject(this)
+
         // Print the stream for debugging.
 //        outputStream.printDump()
 
+//        Log.d(TAG, "Serialization process took " + (System.currentTimeMillis() - starttime).toString() + "ms")
         return outputStream.toByteArray()
     }
 

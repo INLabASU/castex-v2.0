@@ -1,6 +1,7 @@
 package rte.packetization
 
 import android.graphics.Bitmap
+import android.util.Log
 import info.jkjensen.castex_protocol.CastexPreferences
 import rte.RTEFrame
 import rte.RTEPacket
@@ -16,6 +17,7 @@ import java.net.InetAddress
 open class RTEJpegPacketizer{
 
     companion object: RTEPacketizer {
+        private const val TAG = "RTEJpegPacketizer"
 
         /**
          * Packetizes the frame into a list of packets to be sent to the receiver.
@@ -27,6 +29,7 @@ open class RTEJpegPacketizer{
          * size for increased performance.
          */
         override fun packetize(rteFrame: RTEFrame, group: InetAddress, packetSize:Int): ArrayList<DatagramPacket> {
+            val starttime = System.currentTimeMillis()
             val baos = ByteArrayOutputStream()
             rteFrame.bitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos)
             val outputData = baos.toByteArray()
@@ -53,16 +56,21 @@ open class RTEJpegPacketizer{
                 packet.totalPackets = (frameSize / packetSize) + (if (frameSize % packetSize > 0) 1 else 0)
                 packet.offset = offset
                 packet.length = packetLength
+                packet.timestamp = rteFrame.timestamp
 
                 packet.data = outputData.slice(offset..(offset + packetLength)).toByteArray()
                 packet.header.length = RTEProtocol.RTE_STANDARD_PACKET_LENGTH + packet.data.size /* size of header+packet w/o data + size of data */
                 val serialized = packet.serialize()
                 val dGramPacket = DatagramPacket(serialized, serialized!!.size, group, CastexPreferences.PORT_OUT)
                 dGramPackets.add(dGramPacket)
+
+                pid++
                 offset += packetLength
+                bytesRemaining -= packetLength
                 packetLength = if (bytesRemaining >= packetSize) packetSize else bytesRemaining
             }
 
+            Log.d(TAG, "Packetization process took " + (System.currentTimeMillis() - starttime).toString() + "ms")
             return dGramPackets
         }
     }
