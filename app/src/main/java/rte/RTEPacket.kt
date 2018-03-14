@@ -94,12 +94,12 @@ data class RTEPacket(var header: RTEPacketHeader = RTEPacketHeader(),
                 ((this.offset shr 24) and 0xFF).toByte()
         ))
 
-        outputStream.write(byteArrayOf(
-                (this.timestamp and 0xFF).toByte(),
-                ((this.timestamp shr 8) and 0xFF).toByte(),
-                ((this.timestamp shr 16) and 0xFF).toByte(),
-                ((this.timestamp shr 24) and 0xFF).toByte()
-        ))
+//        outputStream.write(byteArrayOf(
+//                (this.timestamp and 0xFF).toByte(),
+//                ((this.timestamp shr 8) and 0xFF).toByte(),
+//                ((this.timestamp shr 16) and 0xFF).toByte(),
+//                ((this.timestamp shr 24) and 0xFF).toByte()
+//        ))
 
         // Payload length of this packet
         outputStream.write(byteArrayOf(

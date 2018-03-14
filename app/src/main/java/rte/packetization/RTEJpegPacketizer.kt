@@ -31,7 +31,7 @@ open class RTEJpegPacketizer{
         override fun packetize(rteFrame: RTEFrame, group: InetAddress, packetSize:Int): ArrayList<DatagramPacket> {
             val starttime = System.currentTimeMillis()
             val baos = ByteArrayOutputStream()
-            rteFrame.bitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos)
+            rteFrame.bitmap.compress(Bitmap.CompressFormat.JPEG, 50, baos)
             val outputData = baos.toByteArray()
             val dGramPackets = arrayListOf<DatagramPacket>()
 //            return DatagramPacket(outputData, outputData.size, group, CastexPreferences.PORT_OUT)
@@ -70,7 +70,7 @@ open class RTEJpegPacketizer{
                 packetLength = if (bytesRemaining >= packetSize) packetSize else bytesRemaining
             }
 
-            Log.d(TAG, "Packetization process took " + (System.currentTimeMillis() - starttime).toString() + "ms")
+//            Log.d(TAG, "Packetization process took " + (System.currentTimeMillis() - starttime).toString() + "ms")
             return dGramPackets
         }
     }

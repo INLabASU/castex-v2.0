@@ -79,7 +79,9 @@ class MainActivity : AppCompatActivity() {
 
         rteSock = MulticastSocket()
         rteSock?.reuseAddress = true
-        group1 = InetAddress.getByName("192.168.43.172") // Linux Box
+//        group1 = InetAddress.getByName("192.168.43.172") // Duo
+        group1 = InetAddress.getByName("192.168.43.15") // Linux Box
+//        group1 = InetAddress.getByName("10.26.152.237") // Linux Box
 
         val sessionBuilder = RTESessionBuilder()
         sessionBuilder.setSocket(rteSock!!)
