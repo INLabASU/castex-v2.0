@@ -87,6 +87,8 @@ class MainActivity : AppCompatActivity() {
         sessionBuilder.setSocket(rteSock!!)
                 .setMulticastLock(multicastLock)
                 .setReceiverAddress(group1!!)
+//                .setup()
+//                .start()
 
 
         startStreamButton.setOnClickListener {
@@ -108,9 +110,7 @@ class MainActivity : AppCompatActivity() {
             imageReader?.close()
         }
 
-        /**
-         * Explicitly ask for permission to read/write (only needed for debugging at this point).
-         */
+        // Explicitly ask for permission to read/write files (only needed for debugging at this point).
         ActivityCompat.requestPermissions(this,
                 arrayOf(WRITE_EXTERNAL_STORAGE, READ_EXTERNAL_STORAGE),
                 REQUEST_FILE_CODE)
@@ -120,6 +120,8 @@ class MainActivity : AppCompatActivity() {
         // If result is from media projection, we can begin capturing.
         if (requestCode == REQUEST_MEDIA_PROJECTION_CODE) {
             super.onActivityResult(requestCode, resultCode, data)
+
+            // TODO: Send this functionality into the Session's start() function.
             val mediaProjection = mediaProjectionManager.getMediaProjection(resultCode, data)
 
             metrics = applicationContext.resources.displayMetrics
@@ -183,14 +185,19 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * Pops the oldest frame from the FIFO buffer and displays it on the imageview.
+     * Pops the oldest frame from the FIFO buffer and displays it on the imageview. Also packetizes
+     * it and sends the packets over the network.
      */
     @Synchronized private fun openScreenshot() {
+
+        // TODO: Send all of this functionality into the Packetizer Run() function.
         var currentImage: RTEFrame?
+
+        // Skip this run if there are no images in the queue.
         if(images.isEmpty()){
-//            Log.d(TAG, "Image array is empty")
             return
         }
+
         currentImage = images.removeAt(0)
         runOnUiThread(Runnable {
             if(currentImage.bitmap.isRecycled){
@@ -203,14 +210,18 @@ class MainActivity : AppCompatActivity() {
             prevImage = currentImage
         })
 
-        // Send out frames on UDP socket.
+        // Prepare the frame as several UDP packets.
         val packets:ArrayList<DatagramPacket> = RTEJpegPacketizer.packetize(currentImage, group1!!, RTEProtocol.RTE_STANDARD_PACKET_LENGTH)
-        for(p in packets){
 
+        // Send out frames on UDP socket.
+        for(p in packets){
             rteSock?.send(p)
         }
     }
 
+    /**
+     * Establish all app-specific parameters to be available system-wide.
+     */
     private fun setupSharedPreferences(){
         val sharedPreferences: SharedPreferences = getSharedPreferences("appConfig", Context.MODE_PRIVATE)
         val editor: SharedPreferences.Editor = sharedPreferences.edit()

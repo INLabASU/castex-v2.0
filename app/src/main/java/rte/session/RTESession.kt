@@ -19,4 +19,20 @@ class RTESession{
     var sock: MulticastSocket? = null
     var receiverAddress:InetAddress? = null
 
+    /**
+     * Initializes the session with the given parameters.
+     */
+    fun start(){
+
+    }
+
+    /**
+     * Verifies that the session is ready to be started. This means that all necessary permissions
+     * have been obtained and all of the necessary fields are non-null.
+     */
+    fun isStartable(){
+        // Check Permissions
+        // Check that all necessary fields are filled.
+    }
+
 }

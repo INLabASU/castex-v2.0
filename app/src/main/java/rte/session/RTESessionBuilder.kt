@@ -29,7 +29,7 @@ class RTESessionBuilder {
         return this
     }
 
-    fun setup(sessionType:String){
+    fun setup(sessionType:String): RTESessionBuilder {
         when (sessionType) {
             RTESession.SENDER_SESSION_TYPE -> {
                 setupSender()
@@ -39,17 +39,22 @@ class RTESessionBuilder {
             }
             else -> throw Exception("Invalid type parameter to rte.session.RTESessionBuilder.setup()")
         }
+        return this
     }
 
-    fun setupSender(){
+    private fun setupSender(){
 
     }
 
-    fun setupReceiver(){
+    private fun setupReceiver(){
         // Check if the user has a multicast lock
         if(session.multicastLock == null || !session.multicastLock!!.isHeld){
             throw Exception("User must acquire MulticastLock and give it to the session via RTESessionBuilder.setMulticastLock() before calling setup()")
         }
 
+    }
+
+    fun start(){
+        this.session.start()
     }
 }

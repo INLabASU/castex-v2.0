@@ -16,11 +16,19 @@ import java.net.InetAddress
  */
 open class RTEJpegPacketizer{
 
-    companion object: RTEPacketizer {
+    companion object: RTEPacketizer, Runnable {
         private const val TAG = "RTEJpegPacketizer"
 
         /**
-         * Packetizes the frame into a list of packets to be sent to the receiver.
+         * An ongoing Runnable used to continuously packetize JPEG data frames for transmission
+         * over the network.
+         */
+        override fun run() {
+//            packetize()
+        }
+
+        /**
+         * Packetizes a single frame into a list of UDP packets to be sent to the receiver.
          *
          * @param rteFrame The frame to be sent
          * @param group The IP Address (as a multicast group) to send to.
