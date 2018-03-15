@@ -1,42 +1,48 @@
 package rte.packetization
 
 import android.graphics.Bitmap
-import android.util.Log
-import info.jkjensen.castex_protocol.CastexPreferences
 import rte.RTEFrame
 import rte.RTEPacket
 import rte.RTEProtocol
+import rte.session.RTESession
 import java.io.ByteArrayOutputStream
 import java.net.DatagramPacket
-import java.net.InetAddress
 
 /**
  * Created by jk on 2/26/18.
  * Packetizes frame data into UDP packets for transmission to receiving devices.
  */
-open class RTEJpegPacketizer{
+open class RTEJpegPacketizer(session:RTESession): RTEPacketizer, Runnable{
 
-    companion object: RTEPacketizer, Runnable {
+    companion object {
         private const val TAG = "RTEJpegPacketizer"
+    }
+    private var session:RTESession? = null
 
-        /**
-         * An ongoing Runnable used to continuously packetize JPEG data frames for transmission
-         * over the network.
-         */
-        override fun run() {
+    init {
+        this.session = session
+    }
+
+    /**
+     * An ongoing Runnable used to continuously packetize JPEG data frames for transmission
+     * over the network.
+     */
+    override fun run() {
 //            packetize()
-        }
+    }
 
-        /**
-         * Packetizes a single frame into a list of UDP packets to be sent to the receiver.
-         *
-         * @param rteFrame The frame to be sent
-         * @param group The IP Address (as a multicast group) to send to.
-         * @param fid The frame ID of the current frame
-         * @param packetSize The desired packet size. This is variable to allow tuning of packet
-         * size for increased performance.
-         */
-        override fun packetize(rteFrame: RTEFrame, group: InetAddress, packetSize:Int): ArrayList<DatagramPacket> {
+    /**
+     * Packetizes a single frame into a list of UDP packets to be sent to the receiver.
+     *
+     * @param rteFrame The frame to be sent
+     * @param packetSize The desired packet size. This is variable to allow tuning of packet
+     * size for increased performance.
+     */
+    override fun packetize(rteFrame: RTEFrame, packetSize:Int): ArrayList<DatagramPacket> {
+        if(session == null){
+            throw Exception("No session associated with JPEG Packetizer")
+        } else {
+
             val starttime = System.currentTimeMillis()
             val baos = ByteArrayOutputStream()
             rteFrame.bitmap.compress(Bitmap.CompressFormat.JPEG, 50, baos)
@@ -50,11 +56,11 @@ open class RTEJpegPacketizer{
             var bytesRemaining = frameSize // The remaining number of bytes left to send
             var packetLength = if (bytesRemaining >= packetSize) packetSize else bytesRemaining
 
-            while(offset <frameSize) {
+            while (offset < frameSize) {
                 val packet = RTEPacket()
 
                 packet.header.magic = RTEProtocol.PACKET_MAGIC
-                packet.header.type = RTEProtocol.PACKET_TYPE_JPEG
+                packet.header.type = session!!.mediaType!!
 
                 packet.fid = rteFrame.fid
                 packet.totalLength = frameSize
@@ -69,7 +75,7 @@ open class RTEJpegPacketizer{
                 packet.data = outputData.slice(offset..(offset + packetLength)).toByteArray()
                 packet.header.length = RTEProtocol.RTE_STANDARD_PACKET_LENGTH + packet.data.size /* size of header+packet w/o data + size of data */
                 val serialized = packet.serialize()
-                val dGramPacket = DatagramPacket(serialized, serialized!!.size, group, CastexPreferences.PORT_OUT)
+                val dGramPacket = DatagramPacket(serialized, serialized!!.size, session!!.receiverAddress, session!!.receiverPort!!)
                 dGramPackets.add(dGramPacket)
 
                 pid++

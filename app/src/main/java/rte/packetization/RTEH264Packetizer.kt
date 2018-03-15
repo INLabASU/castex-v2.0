@@ -1,14 +1,14 @@
 package rte.packetization
 
 import rte.RTEFrame
+import rte.session.RTESession
 import java.net.DatagramPacket
 import java.net.InetAddress
 
 /**
  * Created by jk on 3/13/18.
  */
-class RTEH264Packetizer {
-    companion object: RTEPacketizer {
+class RTEH264Packetizer(session:RTESession): RTEPacketizer {
 
         /**
          * Packetizes the frame into a list of packets to be sent to the receiver.
@@ -19,9 +19,8 @@ class RTEH264Packetizer {
          * @param packetSize The desired packet size. This is variable to allow tuning of packet
          * size for increased performance.
          */
-        override fun packetize(rteFrame: RTEFrame, group: InetAddress, packetSize: Int): ArrayList<DatagramPacket> {
+        override fun packetize(rteFrame: RTEFrame, packetSize: Int): ArrayList<DatagramPacket> {
 
             return arrayListOf()
         }
-    }
 }

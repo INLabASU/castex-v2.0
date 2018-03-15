@@ -1,6 +1,7 @@
 package rte.session
 
 import android.net.wifi.WifiManager
+import rte.packetization.RTEPacketizer
 import java.net.DatagramSocket
 import java.net.InetAddress
 import java.net.MulticastSocket
@@ -18,11 +19,19 @@ class RTESession{
     var multicastLock: WifiManager.MulticastLock? = null
     var sock: MulticastSocket? = null
     var receiverAddress:InetAddress? = null
+    var receiverPort:Int? = null
+    var packetizer: RTEPacketizer? = null
+    var videoType: Int? = null
+    var audioType: Int? = null
+    var streamWidth: Int? = null
+    var streamHeight: Int? = null
 
     /**
      * Initializes the session with the given parameters.
      */
     fun start(){
+
+        //packetizer.run()
 
     }
 

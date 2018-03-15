@@ -24,6 +24,7 @@ import android.view.WindowManager
 import rte.packetization.RTEJpegPacketizer
 import kotlinx.android.synthetic.main.activity_main.*
 import org.jetbrains.anko.mediaProjectionManager
+import rte.packetization.RTEPacketizer
 import rte.session.RTESessionBuilder
 import java.io.FileOutputStream
 import java.lang.Thread.sleep
@@ -57,6 +58,9 @@ class MainActivity : AppCompatActivity() {
     private var group1: InetAddress? = null
     // ID of the current transmitting frame.
     private var fid = 0
+    val sessionBuilder = RTESessionBuilder()
+    var packetizer:RTEPacketizer? = null
+
     /**
      * Tracks the previous bitmap displayed so that it may be recycled immediately when it is no
      * longer needed
@@ -77,18 +81,26 @@ class MainActivity : AppCompatActivity() {
         multicastLock.setReferenceCounted(false)
         multicastLock.acquire()
 
+        metrics = applicationContext.resources.displayMetrics
+
         rteSock = MulticastSocket()
         rteSock?.reuseAddress = true
 //        group1 = InetAddress.getByName("192.168.43.172") // Duo
         group1 = InetAddress.getByName("192.168.43.15") // Linux Box
 //        group1 = InetAddress.getByName("10.26.152.237") // Linux Box
 
-        val sessionBuilder = RTESessionBuilder()
+
         sessionBuilder.setSocket(rteSock!!)
                 .setMulticastLock(multicastLock)
                 .setReceiverAddress(group1!!)
+                .setVideoType(RTEProtocol.MEDIA_TYPE_JPEG)
+//                .setAudioType(RTEProtocol.MEDIA_TYPE_AAC
+                .setStreamHeight(metrics!!.heightPixels)
+                .setStreamWidth(metrics!!.widthPixels)
 //                .setup()
 //                .start()
+
+        packetizer = RTEJpegPacketizer(sessionBuilder.session)
 
 
         startStreamButton.setOnClickListener {
@@ -123,8 +135,6 @@ class MainActivity : AppCompatActivity() {
 
             // TODO: Send this functionality into the Session's start() function.
             val mediaProjection = mediaProjectionManager.getMediaProjection(resultCode, data)
-
-            metrics = applicationContext.resources.displayMetrics
 
             imageReader = ImageReader.newInstance(metrics!!.widthPixels, metrics!!.heightPixels, PixelFormat.RGBA_8888, 5)
             mediaProjection.createVirtualDisplay("test", metrics!!.widthPixels, metrics!!.heightPixels, metrics!!.densityDpi,
@@ -211,7 +221,7 @@ class MainActivity : AppCompatActivity() {
         })
 
         // Prepare the frame as several UDP packets.
-        val packets:ArrayList<DatagramPacket> = RTEJpegPacketizer.packetize(currentImage, group1!!, RTEProtocol.RTE_STANDARD_PACKET_LENGTH)
+        val packets:ArrayList<DatagramPacket> = packetizer?.packetize(currentImage, RTEProtocol.RTE_STANDARD_PACKET_LENGTH)!!
 
         // Send out frames on UDP socket.
         for(p in packets){
