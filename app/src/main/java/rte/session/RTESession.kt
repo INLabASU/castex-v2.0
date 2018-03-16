@@ -1,6 +1,7 @@
 package rte.session
 
 import android.net.wifi.WifiManager
+import rte.RTEProtocol
 import rte.packetization.RTEPacketizer
 import java.net.DatagramSocket
 import java.net.InetAddress
@@ -19,7 +20,7 @@ class RTESession{
     var multicastLock: WifiManager.MulticastLock? = null
     var sock: MulticastSocket? = null
     var receiverAddress:InetAddress? = null
-    var receiverPort:Int? = null
+    var receiverPort:Int? = RTEProtocol.DEFAULT_PORT
     var packetizer: RTEPacketizer? = null
     var videoType: Int? = null
     var audioType: Int? = null

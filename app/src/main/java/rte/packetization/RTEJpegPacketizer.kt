@@ -60,7 +60,8 @@ open class RTEJpegPacketizer(session:RTESession): RTEPacketizer, Runnable{
                 val packet = RTEPacket()
 
                 packet.header.magic = RTEProtocol.PACKET_MAGIC
-                packet.header.type = session!!.mediaType!!
+                // TODO: fix this to put the right (audio/video) header field
+                packet.header.type = session!!.videoType!!
 
                 packet.fid = rteFrame.fid
                 packet.totalLength = frameSize

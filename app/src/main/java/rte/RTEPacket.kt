@@ -21,6 +21,7 @@ data class RTEPacket(var header: RTEPacketHeader = RTEPacketHeader(),
                      var offset:Int = -1,
                      var length:Int = -1,
                      var timestamp:Long = -1,
+                     var flag:Long = -1,
                      var data: ByteArray = ByteArray(0)) {
 
     companion object {
@@ -94,19 +95,34 @@ data class RTEPacket(var header: RTEPacketHeader = RTEPacketHeader(),
                 ((this.offset shr 24) and 0xFF).toByte()
         ))
 
-//        outputStream.write(byteArrayOf(
-//                (this.timestamp and 0xFF).toByte(),
-//                ((this.timestamp shr 8) and 0xFF).toByte(),
-//                ((this.timestamp shr 16) and 0xFF).toByte(),
-//                ((this.timestamp shr 24) and 0xFF).toByte()
-//        ))
-
         // Payload length of this packet
         outputStream.write(byteArrayOf(
                 (this.length and 0xFF).toByte(),
                 ((this.length shr 8) and 0xFF).toByte(),
                 ((this.length shr 16) and 0xFF).toByte(),
                 ((this.length shr 24) and 0xFF).toByte()
+        ))
+
+        outputStream.write(byteArrayOf(
+                (this.timestamp and 0xFF).toByte(),
+                ((this.timestamp shr 8) and 0xFF).toByte(),
+                ((this.timestamp shr 16) and 0xFF).toByte(),
+                ((this.timestamp shr 24) and 0xFF).toByte(),
+                ((this.timestamp shr 32) and 0xFF).toByte(),
+                ((this.timestamp shr 40) and 0xFF).toByte(),
+                ((this.timestamp shr 48) and 0xFF).toByte(),
+                ((this.timestamp shr 56) and 0xFF).toByte()
+        ))
+
+        outputStream.write(byteArrayOf(
+                (this.flag and 0xFF).toByte(),
+                ((this.flag shr 8) and 0xFF).toByte(),
+                ((this.flag shr 16) and 0xFF).toByte(),
+                ((this.flag shr 24) and 0xFF).toByte(),
+                ((this.flag shr 32) and 0xFF).toByte(),
+                ((this.flag shr 40) and 0xFF).toByte(),
+                ((this.flag shr 48) and 0xFF).toByte(),
+                ((this.flag shr 56) and 0xFF).toByte()
         ))
 
         // Payload data

@@ -85,8 +85,8 @@ class MainActivity : AppCompatActivity() {
 
         rteSock = MulticastSocket()
         rteSock?.reuseAddress = true
-//        group1 = InetAddress.getByName("192.168.43.172") // Duo
-        group1 = InetAddress.getByName("192.168.43.15") // Linux Box
+        group1 = InetAddress.getByName("192.168.43.172") // Duo
+//        group1 = InetAddress.getByName("192.168.43.15") // Linux Box
 //        group1 = InetAddress.getByName("10.26.152.237") // Linux Box
 
 
@@ -95,8 +95,8 @@ class MainActivity : AppCompatActivity() {
                 .setReceiverAddress(group1!!)
                 .setVideoType(RTEProtocol.MEDIA_TYPE_JPEG)
 //                .setAudioType(RTEProtocol.MEDIA_TYPE_AAC
-                .setStreamHeight(metrics!!.heightPixels)
-                .setStreamWidth(metrics!!.widthPixels)
+                .setStreamHeight(metrics!!.heightPixels/2)
+                .setStreamWidth(metrics!!.widthPixels/2)
 //                .setup()
 //                .start()
 
@@ -136,8 +136,8 @@ class MainActivity : AppCompatActivity() {
             // TODO: Send this functionality into the Session's start() function.
             val mediaProjection = mediaProjectionManager.getMediaProjection(resultCode, data)
 
-            imageReader = ImageReader.newInstance(metrics!!.widthPixels, metrics!!.heightPixels, PixelFormat.RGBA_8888, 5)
-            mediaProjection.createVirtualDisplay("test", metrics!!.widthPixels, metrics!!.heightPixels, metrics!!.densityDpi,
+            imageReader = ImageReader.newInstance(sessionBuilder.session.streamWidth!!, sessionBuilder.session.streamHeight!!, PixelFormat.RGBA_8888, 5)
+            mediaProjection.createVirtualDisplay("test", sessionBuilder.session.streamWidth!!, sessionBuilder.session.streamHeight!!, metrics!!.densityDpi,
                     WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
                     imageReader!!.surface, null, null)
             var image: Image?
@@ -163,7 +163,7 @@ class MainActivity : AppCompatActivity() {
                     bitmap = Bitmap.createBitmap(image!!.width + rowPadding/pixelStride, image!!.height, Bitmap.Config.ARGB_8888)
                     bitmap!!.copyPixelsFromBuffer(buffer)
 //                    Log.d(TAG, "Adding image with fid: $fid")
-                    val timestamp = System.currentTimeMillis()
+                    val timestamp = System.nanoTime()/1000
                     images.add(RTEFrame(bitmap!!, fid, timestamp))
                     fid++
 
