@@ -1,12 +1,6 @@
 package rte
 
-import android.util.Log
-import info.jkjensen.castex_protocol.printDump
 import java.io.ByteArrayOutputStream
-import java.io.ObjectOutputStream
-import java.io.Serializable
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 import java.util.*
 
 /**
@@ -20,6 +14,7 @@ data class RTEPacket(var header: RTEPacketHeader = RTEPacketHeader(),
                      var totalPackets:Int = -1,
                      var offset:Int = -1,
                      var length:Int = -1,
+                     // TODO: Change timestamp and flag (both 64 bit unsigned) to a larger type to allow for the full 64 bits.
                      var timestamp:Long = -1,
                      var flag:Long = -1,
                      var data: ByteArray = ByteArray(0)) {
@@ -103,6 +98,7 @@ data class RTEPacket(var header: RTEPacketHeader = RTEPacketHeader(),
                 ((this.length shr 24) and 0xFF).toByte()
         ))
 
+        // Timestamp of this frame
         outputStream.write(byteArrayOf(
                 (this.timestamp and 0xFF).toByte(),
                 ((this.timestamp shr 8) and 0xFF).toByte(),
@@ -114,6 +110,7 @@ data class RTEPacket(var header: RTEPacketHeader = RTEPacketHeader(),
                 ((this.timestamp shr 56) and 0xFF).toByte()
         ))
 
+        // Flag for this packet.
         outputStream.write(byteArrayOf(
                 (this.flag and 0xFF).toByte(),
                 ((this.flag shr 8) and 0xFF).toByte(),
@@ -127,28 +124,6 @@ data class RTEPacket(var header: RTEPacketHeader = RTEPacketHeader(),
 
         // Payload data
         outputStream.write(this.data)
-
-//        val bb = ByteBuffer.wrap(this.data)
-//        bb.order(ByteOrder.LITTLE_ENDIAN)
-//        while(bb.hasRemaining()){
-//            try {
-//                if(bb.remaining() > 4){
-//                    val x = bb.getInt()
-//                    outputStream.write(byteArrayOf(
-//                            (x and 0xFF).toByte(),
-//                            ((x shr 8) and 0xFF).toByte(),
-//                            ((x shr 16) and 0xFF).toByte(),
-//                            ((x shr 24) and 0xFF).toByte()))
-//                }else{
-//                    output
-//                }
-//            }catch (e:Exception){
-//                break
-//            }
-//        }
-
-//        val oos = ObjectOutputStream(outputStream)
-//        oos.writeObject(this)
 
         // Print the stream for debugging.
 //        outputStream.printDump()
@@ -170,6 +145,8 @@ data class RTEPacket(var header: RTEPacketHeader = RTEPacketHeader(),
         if (totalPackets != other.totalPackets) return false
         if (offset != other.offset) return false
         if (length != other.length) return false
+        if (timestamp != other.timestamp) return false
+        if (flag != other.flag) return false
         if (!Arrays.equals(data, other.data)) return false
 
         return true
@@ -183,6 +160,8 @@ data class RTEPacket(var header: RTEPacketHeader = RTEPacketHeader(),
         result = 31 * result + totalPackets
         result = 31 * result + offset
         result = 31 * result + length
+        result = 31 * result + timestamp.hashCode()
+        result = 31 * result + flag.hashCode()
         result = 31 * result + Arrays.hashCode(data)
         return result
     }

@@ -25,6 +25,7 @@ import rte.packetization.RTEJpegPacketizer
 import kotlinx.android.synthetic.main.activity_main.*
 import org.jetbrains.anko.mediaProjectionManager
 import rte.packetization.RTEPacketizer
+import rte.session.RTESession
 import rte.session.RTESessionBuilder
 import java.io.FileOutputStream
 import java.lang.Thread.sleep
@@ -91,13 +92,14 @@ class MainActivity : AppCompatActivity() {
 
 
         sessionBuilder.setSocket(rteSock!!)
+                .setContext(this)
                 .setMulticastLock(multicastLock)
                 .setReceiverAddress(group1!!)
                 .setVideoType(RTEProtocol.MEDIA_TYPE_JPEG)
 //                .setAudioType(RTEProtocol.MEDIA_TYPE_AAC
                 .setStreamHeight(metrics!!.heightPixels/2)
                 .setStreamWidth(metrics!!.widthPixels/2)
-//                .setup()
+                .setup(RTESession.SENDER_SESSION_TYPE)
 //                .start()
 
         packetizer = RTEJpegPacketizer(sessionBuilder.session)

@@ -1,5 +1,6 @@
 package rte.session
 
+import android.content.Context
 import android.net.wifi.WifiManager
 import rte.RTEProtocol
 import rte.packetization.RTEH264Packetizer
@@ -78,8 +79,8 @@ class RTESessionBuilder {
      * @return this RTESessionBuilder for function chaining.
      */
     fun setSocket(sock: MulticastSocket):RTESessionBuilder{
-        this.session.sock = sock
-        this.session.sock?.reuseAddress = true
+        this.session.vSock = sock
+        this.session.vSock?.reuseAddress = true
         return this
     }
 
@@ -121,28 +122,53 @@ class RTESessionBuilder {
         return this
     }
 
+    fun setContext(context: Context): RTESessionBuilder{
+        this.session.context = context
+        return this
+    }
+
     fun setup(sessionType:String): RTESessionBuilder {
-        when (sessionType) {
-            RTESession.SENDER_SESSION_TYPE -> {
-                setupSender()
-            } RTESession.RECEIVER_SESSION_TYPE -> {
-                setupReceiver()
+        // Check if all necessary fields and permissions are set before setting up this session.
+        if(this.session.isStartable()) {
+            if(this.session.videoType != null){
+                this.session.vSock = MulticastSocket()
+                this.session.vSock!!.reuseAddress = true
             }
-            else -> throw Exception("Invalid type parameter to rte.session.RTESessionBuilder.setup()")
+            if(this.session.audioType != null){
+                this.session.aSock = MulticastSocket()
+                this.session.aSock!!.reuseAddress = true
+            }
+
+            when (sessionType) {
+                RTESession.SENDER_SESSION_TYPE -> {
+                    setupSender()
+                }
+                RTESession.RECEIVER_SESSION_TYPE -> {
+                    setupReceiver()
+                }
+                else -> throw Exception("Invalid type parameter to rte.session.RTESessionBuilder.setup()")
+            }
+            this.session.sessionType = sessionType
         }
         return this
     }
 
-    private fun setupSender(){
-
+    private fun setupSender(): RTESessionBuilder{
+        // If the address for the receiver is not set, set it to a default multicast address.
+        if(this.session.receiverAddress == null){
+            this.session.receiverAddress = InetAddress.getByName("224.0.0.1")
+        }
+        return this
     }
 
-    private fun setupReceiver(){
+    private fun setupReceiver(): RTESessionBuilder{
+        // The receiver does not require a packetizer.
+        this.session.packetizer = null
         // Check if the user has a multicast lock
         if(session.multicastLock == null || !session.multicastLock!!.isHeld){
             throw Exception("User must acquire MulticastLock and give it to the session via RTESessionBuilder.setMulticastLock() before calling setup()")
         }
-
+        return this
     }
 
     fun start(){
