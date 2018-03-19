@@ -2,6 +2,7 @@ package rte.session
 
 import android.content.Context
 import android.net.wifi.WifiManager
+import android.util.Log
 import rte.RTEProtocol
 import rte.packetization.RTEH264Packetizer
 import rte.packetization.RTEJpegPacketizer
@@ -13,6 +14,10 @@ import java.net.MulticastSocket
  *
  */
 class RTESessionBuilder {
+    companion object {
+        const val TAG = "RTESessionBuilder"
+    }
+
     val session = RTESession()
 
     /**
@@ -74,19 +79,6 @@ class RTESessionBuilder {
     /**
      * Required for both transmitter and receiver.
      *
-     * Set the socket for transmission/reception of RTE packets.
-     *
-     * @return this RTESessionBuilder for function chaining.
-     */
-    fun setSocket(sock: MulticastSocket):RTESessionBuilder{
-        this.session.vSock = sock
-        this.session.vSock?.reuseAddress = true
-        return this
-    }
-
-    /**
-     * Required for both transmitter and receiver.
-     *
      * Set the video type of this session.
      *
      * @return this RTESessionBuilder for function chaining.
@@ -128,6 +120,7 @@ class RTESessionBuilder {
     }
 
     fun setup(sessionType:String): RTESessionBuilder {
+        this.session.sessionType = sessionType
         // Check if all necessary fields and permissions are set before setting up this session.
         if(this.session.isStartable()) {
             if(this.session.videoType != null){
@@ -158,6 +151,8 @@ class RTESessionBuilder {
         if(this.session.receiverAddress == null){
             this.session.receiverAddress = InetAddress.getByName("224.0.0.1")
         }
+        Log.d(TAG, "RTE Session set up for sending to " + this.session.receiverAddress.toString() +
+            "on port " + this.session.receiverPort)
         return this
     }
 

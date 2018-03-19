@@ -53,8 +53,6 @@ class MainActivity : AppCompatActivity() {
     private var fos:FileOutputStream? = null
     // Used to track timestamps during execution
     private var startTime = System.currentTimeMillis()
-    // Socket used as a datastream
-    private var rteSock:MulticastSocket? = null
     // Sender address TODO: Make this address dynamic.
     private var group1: InetAddress? = null
     // ID of the current transmitting frame.
@@ -84,14 +82,12 @@ class MainActivity : AppCompatActivity() {
 
         metrics = applicationContext.resources.displayMetrics
 
-        rteSock = MulticastSocket()
-        rteSock?.reuseAddress = true
-        group1 = InetAddress.getByName("192.168.43.172") // Duo
-//        group1 = InetAddress.getByName("192.168.43.15") // Linux Box
+//        group1 = InetAddress.getByName("192.168.43.172") // Duo
+        group1 = InetAddress.getByName("192.168.43.15") // Linux Box
 //        group1 = InetAddress.getByName("10.26.152.237") // Linux Box
 
 
-        sessionBuilder.setSocket(rteSock!!)
+        sessionBuilder
                 .setContext(this)
                 .setMulticastLock(multicastLock)
                 .setReceiverAddress(group1!!)
@@ -227,7 +223,7 @@ class MainActivity : AppCompatActivity() {
 
         // Send out frames on UDP socket.
         for(p in packets){
-            rteSock?.send(p)
+            sessionBuilder.session.vSock?.send(p)
         }
     }
 
