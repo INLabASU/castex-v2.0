@@ -1,6 +1,7 @@
 package rte.session
 
 import android.content.Context
+import android.content.Intent
 import android.net.wifi.WifiManager
 import android.util.Log
 import rte.RTEProtocol
@@ -46,6 +47,20 @@ class RTESessionBuilder {
     }
 
     /**
+     * Required for transmitter.
+     *
+     * Set the media projection codes for this session. You must request a mediaprojection before
+     * being able to start the session.
+     *
+     * @return this RTESessionBuilder for function chaining.
+     */
+    fun setMediaProjectionResults(resultCode:Int, resultData: Intent?): RTESessionBuilder {
+        this.session.mediaProjectionResultCode = resultCode
+        this.session.mediaProjectionResultData = resultData
+        return this
+    }
+
+    /**
      * Required only for transmitter. Required only for streams including video.
      *
      * Set the stream width in pixels.
@@ -60,7 +75,6 @@ class RTESessionBuilder {
         return this
     }
 
-
     /**
      * Required only for transmitter. Required only for streams including video.
      *
@@ -73,6 +87,21 @@ class RTESessionBuilder {
             throw Exception("Invalid stream height")
         }
         this.session.streamHeight = height
+        return this
+    }
+
+    /**
+     * Required only for transmitter. Required only for streams including video.
+     *
+     * Set the stream density in dpi. This can be obtained from DisplayMetrics.densityDPI.
+     *
+     * @return this RTESessionBuilder for function chaining.
+     */
+    fun setStreamDensity(density:Int): RTESessionBuilder{
+        if(density <= 0){
+            throw Exception("Invalid stream density")
+        }
+        this.session.videoDensity = density
         return this
     }
 
@@ -114,6 +143,13 @@ class RTESessionBuilder {
         return this
     }
 
+    /**
+     * Required for both transmitter and receiver.
+     *
+     * Set the context of this session.
+     *
+     * @return this RTESessionBuilder for function chaining.
+     */
     fun setContext(context: Context): RTESessionBuilder{
         this.session.context = context
         return this

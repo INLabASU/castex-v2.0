@@ -7,7 +7,18 @@ import java.net.InetAddress
 /**
  * Created by jk on 3/13/18.
  */
-interface RTEPacketizer {
+abstract class RTEPacketizer:Runnable {
+    private var runnerThread:Thread? = null
+
+    /**
+     * A helper function to set up and start the thread that will run this packetizer.
+     */
+    fun start(){
+        if(runnerThread == null){
+            runnerThread = Thread(this)
+            runnerThread!!.start()
+        }
+    }
 
     /**
      * Packetizes the frame into a list of packets to be sent to the receiver.
@@ -16,5 +27,5 @@ interface RTEPacketizer {
      * @param packetSize The desired packet size. This is variable to allow tuning of packet
      * size for increased performance.
      */
-    fun packetize(rteFrame: RTEFrame, packetSize:Int): ArrayList<DatagramPacket>
+    abstract fun packetize(rteFrame: RTEFrame, packetSize:Int): ArrayList<DatagramPacket>
 }

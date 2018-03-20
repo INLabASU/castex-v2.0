@@ -12,13 +12,22 @@ import java.net.DatagramPacket
  * Created by jk on 2/26/18.
  * Packetizes frame data into UDP packets for transmission to receiving devices.
  */
-open class RTEJpegPacketizer(session:RTESession): RTEPacketizer, Runnable{
+open class RTEJpegPacketizer(session:RTESession): RTEPacketizer(), Runnable{
 
     companion object {
         private const val TAG = "RTEJpegPacketizer"
     }
-    private var session:RTESession? = null
 
+    // Image FIFO buffer for capture -> stream
+    var images:ArrayList<RTEFrame> = arrayListOf()
+    private var session:RTESession? = null
+    /* Tracks the previous bitmap displayed so that it may be recycled immediately when it is no
+    longer needed */
+    private var prevImage: RTEFrame? = null
+
+    /**
+     * Constructor
+     */
     init {
         this.session = session
     }
@@ -28,7 +37,26 @@ open class RTEJpegPacketizer(session:RTESession): RTEPacketizer, Runnable{
      * over the network.
      */
     override fun run() {
-//            packetize()
+        var currentImage: RTEFrame?
+
+        // Skip this run if there are no images in the queue.
+        if(images.isEmpty()){
+            return
+        }
+
+        currentImage = images.removeAt(0)
+        if(prevImage != null){
+            prevImage!!.bitmap.recycle()
+        }
+        prevImage = currentImage
+
+        // Prepare the frame as several UDP packets.
+        val packets:ArrayList<DatagramPacket> = packetize(currentImage, RTEProtocol.RTE_STANDARD_PACKET_LENGTH)!!
+
+        // Send out frames on UDP socket.
+        for(p in packets){
+            session!!.vSock?.send(p)
+        }
     }
 
     /**
@@ -38,7 +66,7 @@ open class RTEJpegPacketizer(session:RTESession): RTEPacketizer, Runnable{
      * @param packetSize The desired packet size. This is variable to allow tuning of packet
      * size for increased performance.
      */
-    override fun packetize(rteFrame: RTEFrame, packetSize:Int): ArrayList<DatagramPacket> {
+    override fun packetize(rteFrame: RTEFrame, packetSize: Int): ArrayList<DatagramPacket> {
         if(session == null){
             throw Exception("No session associated with JPEG Packetizer")
         } else {

@@ -2,12 +2,14 @@ package rte.session
 
 import android.Manifest
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.wifi.WifiManager
 import android.support.v4.content.ContextCompat.checkSelfPermission
 import rte.RTEProtocol
+import rte.ScreenCapturerService
 import rte.packetization.RTEPacketizer
-import java.net.DatagramSocket
+import java.io.Serializable
 import java.net.InetAddress
 import java.net.MulticastSocket
 
@@ -15,7 +17,7 @@ import java.net.MulticastSocket
  * Created by jk on 3/13/18.
  * A streaming session for the RTE Protocol and its associated data.
  */
-class RTESession{
+class RTESession:Serializable{
     companion object {
         const val SENDER_SESSION_TYPE = "sender"
         const val RECEIVER_SESSION_TYPE = "receiver"
@@ -35,13 +37,22 @@ class RTESession{
     var audioType: Int? = null
     var streamWidth: Int? = null
     var streamHeight: Int? = null
+    var videoDensity: Int? = null
+    var mediaProjectionResultCode: Int? = null
+    var mediaProjectionResultData: Intent? = null
 
     /**
      * Initializes the session with the given parameters.
      */
     fun start(){
 
-        //packetizer.run()
+        val serviceIntent = Intent(context, ScreenCapturerService::class.java)
+        serviceIntent.putExtra(ScreenCapturerService.MEDIA_PROJECTION_RESULT_CODE, this.mediaProjectionResultCode)
+        serviceIntent.putExtra(ScreenCapturerService.MEDIA_PROJECTION_RESULT_DATA, this.mediaProjectionResultData)
+        serviceIntent.putExtra(ScreenCapturerService.SESSION_CODE, this)
+        context!!.startService(serviceIntent)
+
+        packetizer!!.start()
 
     }
 
@@ -81,8 +92,10 @@ class RTESession{
 
         when(sessionType){
             SENDER_SESSION_TYPE ->{
-                if(videoType != null && (streamHeight == null || streamWidth == null)){
-                    throw Exception("Session width and height must be set for video streaming.")
+                if(videoType != null && (streamHeight == null || streamWidth == null || videoDensity == null)){
+                    throw Exception("Session width, height, and density must be set for video streaming.")
+                } else if(mediaProjectionResultCode == null || mediaProjectionResultData == null){
+                    throw Exception("Transmitter session must include media projection results.")
                 }
             }
             RECEIVER_SESSION_TYPE ->{

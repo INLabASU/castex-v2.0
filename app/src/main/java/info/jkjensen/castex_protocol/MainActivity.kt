@@ -43,28 +43,17 @@ class MainActivity : AppCompatActivity() {
         private const val REQUEST_FILE_CODE = 301
     }
 
-    // Image FIFO buffer for capture -> stream
-    private var images:ArrayList<RTEFrame> = arrayListOf()
     // Display metrics for screen attributes
     private var metrics:DisplayMetrics? = null
-    // Used to feed captured frames to our buffer
-    private var imageReader:ImageReader? = null
     // Used for writing stats to a file while debugging
     private var fos:FileOutputStream? = null
     // Used to track timestamps during execution
     private var startTime = System.currentTimeMillis()
     // Sender address TODO: Make this address dynamic.
     private var group1: InetAddress? = null
-    // ID of the current transmitting frame.
-    private var fid = 0
     val sessionBuilder = RTESessionBuilder()
     var packetizer:RTEPacketizer? = null
-
-    /**
-     * Tracks the previous bitmap displayed so that it may be recycled immediately when it is no
-     * longer needed
-     */
-    private var prevImage: RTEFrame? = null
+    var multicastLock:WifiManager.MulticastLock? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -76,29 +65,15 @@ class MainActivity : AppCompatActivity() {
         // Acquire a multicast lock (used so the device can receive packets not explicitly addressed
         // to it.
         val wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
-        val multicastLock = wifiManager.createMulticastLock("multicastLock")
-        multicastLock.setReferenceCounted(false)
-        multicastLock.acquire()
+        multicastLock = wifiManager.createMulticastLock("multicastLock")
+        multicastLock!!.setReferenceCounted(false)
+        multicastLock!!.acquire()
 
         metrics = applicationContext.resources.displayMetrics
 
 //        group1 = InetAddress.getByName("192.168.43.172") // Duo
         group1 = InetAddress.getByName("192.168.43.15") // Linux Box
 //        group1 = InetAddress.getByName("10.26.152.237") // Linux Box
-
-
-        sessionBuilder
-                .setContext(this)
-                .setMulticastLock(multicastLock)
-                .setReceiverAddress(group1!!)
-                .setVideoType(RTEProtocol.MEDIA_TYPE_JPEG)
-//                .setAudioType(RTEProtocol.MEDIA_TYPE_AAC
-                .setStreamHeight(metrics!!.heightPixels/2)
-                .setStreamWidth(metrics!!.widthPixels/2)
-                .setup(RTESession.SENDER_SESSION_TYPE)
-//                .start()
-
-        packetizer = RTEJpegPacketizer(sessionBuilder.session)
 
 
         startStreamButton.setOnClickListener {
@@ -117,7 +92,7 @@ class MainActivity : AppCompatActivity() {
 
         closeStreamButton.setOnClickListener{
             fos?.close()
-            imageReader?.close()
+//            imageReader?.close()
         }
 
         // Explicitly ask for permission to read/write files (only needed for debugging at this point).
@@ -131,61 +106,25 @@ class MainActivity : AppCompatActivity() {
         if (requestCode == REQUEST_MEDIA_PROJECTION_CODE) {
             super.onActivityResult(requestCode, resultCode, data)
 
-            // TODO: Send this functionality into the Session's start() function.
-            val mediaProjection = mediaProjectionManager.getMediaProjection(resultCode, data)
+            sessionBuilder
+                    .setContext(this)
+                    .setMulticastLock(multicastLock!!)
+                    .setReceiverAddress(group1!!)
+                    .setVideoType(RTEProtocol.MEDIA_TYPE_JPEG)
+//                .setAudioType(RTEProtocol.MEDIA_TYPE_AAC)
+                    .setStreamHeight(metrics!!.heightPixels/2)
+                    .setStreamWidth(metrics!!.widthPixels/2)
+                    .setStreamDensity(metrics!!.densityDpi)
+                    .setMediaProjectionResults(resultCode, data)
+                    .setup(RTESession.SENDER_SESSION_TYPE)
+//                .start()
 
-            imageReader = ImageReader.newInstance(sessionBuilder.session.streamWidth!!, sessionBuilder.session.streamHeight!!, PixelFormat.RGBA_8888, 5)
-            mediaProjection.createVirtualDisplay("test", sessionBuilder.session.streamWidth!!, sessionBuilder.session.streamHeight!!, metrics!!.densityDpi,
-                    WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
-                    imageReader!!.surface, null, null)
-            var image: Image?
-            var bitmap: Bitmap?
-            fos = FileOutputStream(filesDir.absolutePath +  "/screenCaptureTiming.txt")
-            Log.d(TAG, "Writing timing log to " + filesDir.absolutePath + "/screenCaptureTiming.txt")
-            imageReader!!.setOnImageAvailableListener({
-                image = null
-                bitmap = null
+            packetizer = RTEJpegPacketizer(sessionBuilder.session)
 
-                try {
-                    image = imageReader!!.acquireLatestImage()?: throw Exception("Failed to get latest image")
-                    val planes = image!!.planes
-                    val buffer = planes[0].buffer ?: throw Exception("Failed to get image buffer")
-
-                    // For debugging, write timestamps to a text file for external timing analysis
-//                    fos?.write(((System.currentTimeMillis() - startTime).toString() + "\n").toByteArray())
-
-                    buffer.rewind()
-                    val pixelStride = planes[0].pixelStride
-                    val rowStride = planes[0].rowStride
-                    val rowPadding = rowStride - pixelStride * image!!.width
-                    bitmap = Bitmap.createBitmap(image!!.width + rowPadding/pixelStride, image!!.height, Bitmap.Config.ARGB_8888)
-                    bitmap!!.copyPixelsFromBuffer(buffer)
-//                    Log.d(TAG, "Adding image with fid: $fid")
-                    val timestamp = System.nanoTime()/1000
-                    images.add(RTEFrame(bitmap!!, fid, timestamp))
-                    fid++
-
-
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                } finally {
-
-                    if (image != null)
-                        image?.close()
-                }
-            }, null)
-
-            Thread(Runnable {
-                while (true) {
-                    sleep(5)
-                    openScreenshot()
-
-                }
-            }).start()
+            // TODO: Call session.start() here
         } else if(requestCode == REQUEST_OVERLAY_CODE){
             /* If the result is from the overlay request, we must now request the media projection
-                permissions
-             */
+                permissions  */
             startActivityForResult(
                     mediaProjectionManager.createScreenCaptureIntent(),
                     REQUEST_MEDIA_PROJECTION_CODE)
@@ -199,32 +138,6 @@ class MainActivity : AppCompatActivity() {
     @Synchronized private fun openScreenshot() {
 
         // TODO: Send all of this functionality into the Packetizer Run() function.
-        var currentImage: RTEFrame?
-
-        // Skip this run if there are no images in the queue.
-        if(images.isEmpty()){
-            return
-        }
-
-        currentImage = images.removeAt(0)
-        runOnUiThread(Runnable {
-            if(currentImage.bitmap.isRecycled){
-                return@Runnable
-            }
-//            myimageview.setImageBitmap(currentImage.bitmap)
-            if(prevImage != null){
-                prevImage!!.bitmap.recycle()
-            }
-            prevImage = currentImage
-        })
-
-        // Prepare the frame as several UDP packets.
-        val packets:ArrayList<DatagramPacket> = packetizer?.packetize(currentImage, RTEProtocol.RTE_STANDARD_PACKET_LENGTH)!!
-
-        // Send out frames on UDP socket.
-        for(p in packets){
-            sessionBuilder.session.vSock?.send(p)
-        }
     }
 
     /**
