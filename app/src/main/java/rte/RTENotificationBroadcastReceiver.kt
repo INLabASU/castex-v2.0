@@ -4,12 +4,11 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
-import net.majorkernelpanic.streaming.rtsp.RtspServer
 
 /**
  * Created by jk on 1/18/18.
  */
-class CastexNotificationBroadcastReceiver: BroadcastReceiver() {
+class RTENotificationBroadcastReceiver: BroadcastReceiver() {
     companion object {
         val TAG = "CastexBroadcastReceiver"
     }

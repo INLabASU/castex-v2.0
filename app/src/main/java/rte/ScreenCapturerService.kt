@@ -40,7 +40,7 @@ class ScreenCapturerService: IntentService("ScreenCaptureService") {
     private var resultCode: Int = 0
     private var resultData: Intent? = null
     private var mediaProjection: MediaProjection? = null
-    private val broadcastReceiver = CastexNotificationBroadcastReceiver()
+    private val broadcastReceiver = RTENotificationBroadcastReceiver()
     // Used to feed captured frames to our buffer
     private var imageReader:ImageReader? = null
     private var session:RTESession? = null
