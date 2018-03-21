@@ -5,6 +5,8 @@ import android.content.Intent
 import android.net.wifi.WifiManager
 import android.util.Log
 import rte.RTEProtocol
+import rte.RTEProtocol.Companion.RECEIVER_SESSION_TYPE
+import rte.RTEProtocol.Companion.SENDER_SESSION_TYPE
 import rte.packetization.RTEH264Packetizer
 import rte.packetization.RTEJpegPacketizer
 import java.net.InetAddress
@@ -30,7 +32,7 @@ class RTESessionBuilder {
      * @return this RTESessionBuilder for function chaining.
      */
     fun setMulticastLock(lock: WifiManager.MulticastLock):RTESessionBuilder{
-        this.session.multicastLock = lock
+        this.session.multicastLockHeld = lock.isHeld
         return this
     }
 
@@ -41,8 +43,8 @@ class RTESessionBuilder {
      *
      * @return this RTESessionBuilder for function chaining.
      */
-    fun setReceiverAddress(address:InetAddress): RTESessionBuilder{
-        this.session.receiverAddress = address
+    fun setReceiverAddress(address:String): RTESessionBuilder{
+        this.session.receiverAddressStr = address
         return this
     }
 
@@ -113,14 +115,6 @@ class RTESessionBuilder {
      * @return this RTESessionBuilder for function chaining.
      */
     fun setVideoType(videoType:Int): RTESessionBuilder{
-        when(videoType){
-            RTEProtocol.MEDIA_TYPE_JPEG -> {
-                this.session.packetizer = RTEJpegPacketizer(this.session)
-            } RTEProtocol.MEDIA_TYPE_H264 -> {
-                this.session.packetizer = RTEH264Packetizer(this.session)
-            }
-            else -> throw Exception("Invalid video type for rte.session.RTESessionBuilder.setMediaType()")
-        }
         this.session.videoType = videoType
         return this
     }
@@ -159,20 +153,12 @@ class RTESessionBuilder {
         this.session.sessionType = sessionType
         // Check if all necessary fields and permissions are set before setting up this session.
         if(this.session.isStartable()) {
-            if(this.session.videoType != null){
-                this.session.vSock = MulticastSocket()
-                this.session.vSock!!.reuseAddress = true
-            }
-            if(this.session.audioType != null){
-                this.session.aSock = MulticastSocket()
-                this.session.aSock!!.reuseAddress = true
-            }
 
             when (sessionType) {
-                RTESession.SENDER_SESSION_TYPE -> {
+                SENDER_SESSION_TYPE -> {
                     setupSender()
                 }
-                RTESession.RECEIVER_SESSION_TYPE -> {
+                RECEIVER_SESSION_TYPE -> {
                     setupReceiver()
                 }
                 else -> throw Exception("Invalid type parameter to rte.session.RTESessionBuilder.setup()")
@@ -183,12 +169,8 @@ class RTESessionBuilder {
     }
 
     private fun setupSender(): RTESessionBuilder{
-        // If the address for the receiver is not set, set it to a default multicast address.
-        if(this.session.receiverAddress == null){
-            this.session.receiverAddress = InetAddress.getByName("224.0.0.1")
-        }
-        Log.d(TAG, "RTE Session set up for sending to " + this.session.receiverAddress.toString() +
-            "on port " + this.session.receiverPort)
+        Log.d(TAG, "RTE Session set up for sending to " + this.session.receiverAddressStr +
+            " on port " + this.session.receiverPort)
         return this
     }
 
@@ -196,7 +178,7 @@ class RTESessionBuilder {
         // The receiver does not require a packetizer.
         this.session.packetizer = null
         // Check if the user has a multicast lock
-        if(session.multicastLock == null || !session.multicastLock!!.isHeld){
+        if(!session.multicastLockHeld){
             throw Exception("User must acquire MulticastLock and give it to the session via RTESessionBuilder.setMulticastLock() before calling setup()")
         }
         return this

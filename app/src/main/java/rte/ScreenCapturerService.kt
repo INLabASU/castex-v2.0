@@ -10,13 +10,18 @@ import android.media.Image
 import android.media.ImageReader
 import android.media.projection.MediaProjection
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.support.v4.app.NotificationCompat
 import android.util.Log
 import android.view.WindowManager
 import android.widget.Toast
 import info.jkjensen.castex_protocol.MainActivity
+import info.jkjensen.castex_protocol.R
 import org.jetbrains.anko.mediaProjectionManager
 import rte.packetization.RTEJpegPacketizer
 import rte.session.RTESession
+import java.lang.Thread.sleep
 
 
 /**
@@ -45,8 +50,11 @@ class ScreenCapturerService: IntentService("ScreenCaptureService") {
     private var imageReader:ImageReader? = null
     private var session:RTESession? = null
 
+    private var handler: Handler? = null
+
     // ID of the current capturing frame.
     private var fid = 0
+    private var captureThread:Thread? = null
 
     @TargetApi(Build.VERSION_CODES.O)
     override fun onCreate() {
@@ -60,11 +68,32 @@ class ScreenCapturerService: IntentService("ScreenCaptureService") {
         registerReceiver(broadcastReceiver, filter)
 
         Toast.makeText(this, "Sharing screen", Toast.LENGTH_LONG).show()
+
+        val notificationIntent = Intent(this, applicationContext.javaClass)
+        val pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0)
+
+
+        val stopAction = Intent()
+        stopAction.action = STOP_ACTION
+        val stopIntent = PendingIntent.getBroadcast(applicationContext, 12345, stopAction, PendingIntent.FLAG_UPDATE_CURRENT)
+        val action = NotificationCompat.Action.Builder(R.drawable.notification_animated, "Stop streaming", stopIntent).build()
+
+        val builder = NotificationCompat.Builder(this, ScreenRecordNotification.id)
+                .setContentTitle(getText(R.string.notification_title))
+                .setContentText(getText(R.string.notification_message))
+                .setSmallIcon(R.drawable.notification_animated)
+                .setContentIntent(pendingIntent)
+                .setTicker(getText(R.string.notification_message))
+                .addAction(action)
+
+        startForeground(ONGOING_NOTIFICATION_IDENTIFIER, builder.build())
         super.onCreate()
     }
 
     override fun onDestroy() {
+        Log.d(TAG, "Destroying")
         unregisterReceiver(broadcastReceiver)
+        captureThread?.interrupt()
         super.onDestroy()
     }
 
@@ -146,60 +175,76 @@ class ScreenCapturerService: IntentService("ScreenCaptureService") {
 
 
         val resultCode = intent?.getIntExtra(MEDIA_PROJECTION_RESULT_CODE, 0)
-        val resultData:Intent? = intent?.getParcelableExtra<Intent>(MEDIA_PROJECTION_RESULT_DATA)
+        val resultData:Intent? = intent?.getParcelableExtra(MEDIA_PROJECTION_RESULT_DATA)
         mediaProjection = mediaProjectionManager.getMediaProjection(resultCode!!, resultData)
         if(mediaProjection == null){
             throw Exception("Failed to get mediaprojection.")
         }
 
-        session = intent?.getSerializableExtra(SESSION_CODE) as RTESession
+        session = intent.getParcelableExtra(SESSION_CODE)
+        session!!.context = applicationContext
+        session!!.start()
+
+        // Create a new thread to run all capturing on.
+        captureThread = Thread{
+            Looper.prepare()
+            handler = Handler()
+            Looper.loop()
+        }
+        captureThread!!.start()
 
         imageReader = ImageReader.newInstance(session!!.streamWidth!!, session!!.streamHeight!!, PixelFormat.RGBA_8888, 5)
-        mediaProjection!!.createVirtualDisplay("test", session!!.streamWidth!!, session!!.streamHeight!!,session!!.videoDensity!!,
+        val virtualDisplay = mediaProjection!!.createVirtualDisplay("test", session!!.streamWidth!!, session!!.streamHeight!!,session!!.videoDensity!!,
                 WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
-                imageReader!!.surface, null, null)
+                imageReader!!.surface, null, handler)
         var image: Image?
         var bitmap: Bitmap?
         Log.d(MainActivity.TAG, "Writing timing log to " + filesDir.absolutePath + "/screenCaptureTiming.txt")
         imageReader!!.setOnImageAvailableListener({
             image = null
             bitmap = null
+            if(!captureThread!!.isInterrupted) {
 
-            try {
-                image = imageReader!!.acquireLatestImage()?: throw Exception("Failed to get latest image")
-                val planes = image!!.planes
-                val buffer = planes[0].buffer ?: throw Exception("Failed to get image buffer")
+                try {
+                    image = imageReader!!.acquireLatestImage() ?: throw Exception("Failed to get latest image")
+                    val planes = image!!.planes
+                    val buffer = planes[0].buffer ?: throw Exception("Failed to get image buffer")
 
-                // For debugging, write timestamps to a text file for external timing analysis
+                    // For debugging, write timestamps to a text file for external timing analysis
 //                    fos?.write(((System.currentTimeMillis() - startTime).toString() + "\n").toByteArray())
 
-                buffer.rewind()
-                val pixelStride = planes[0].pixelStride
-                val rowStride = planes[0].rowStride
-                val rowPadding = rowStride - pixelStride * image!!.width
-                bitmap = Bitmap.createBitmap(image!!.width + rowPadding/pixelStride, image!!.height, Bitmap.Config.ARGB_8888)
-                bitmap!!.copyPixelsFromBuffer(buffer)
+                    buffer.rewind()
+                    val pixelStride = planes[0].pixelStride
+                    val rowStride = planes[0].rowStride
+                    val rowPadding = rowStride - pixelStride * image!!.width
+                    bitmap = Bitmap.createBitmap(image!!.width + rowPadding / pixelStride, image!!.height, Bitmap.Config.ARGB_8888)
+                    bitmap!!.copyPixelsFromBuffer(buffer)
 //                    Log.d(TAG, "Adding image with fid: $fid")
-                val timestamp = System.nanoTime()/1000
-                (session!!.packetizer as RTEJpegPacketizer).images.add(RTEFrame(bitmap!!, fid, timestamp))
-                fid++
+                    val timestamp = System.nanoTime() / 1000
+                    (session!!.packetizer as RTEJpegPacketizer).images.add(RTEFrame(bitmap!!, fid, timestamp))
+                    fid++
 
 
-            } catch (e: Exception) {
-                e.printStackTrace()
-            } finally {
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                } finally {
 
-                if (image != null)
-                    image?.close()
+                    if (image != null)
+                        image?.close()
+                }
             }
-        }, null)
+        }, handler)
 
-        Thread(Runnable {
-            while (true) {
-                Thread.sleep(5)
-//                openScreenshot()
+//        Thread(Runnable {
+//            while (true) {
+//                Thread.sleep(5)
+////                openScreenshot()
+//
+//            }
+//        }).start()
 
-            }
-        }).start()
+        while(true){
+            sleep(10)
+        }
     }
 }

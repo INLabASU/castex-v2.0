@@ -1,5 +1,6 @@
 package rte.packetization
 
+import android.os.Parcelable
 import rte.RTEFrame
 import java.net.DatagramPacket
 import java.net.InetAddress

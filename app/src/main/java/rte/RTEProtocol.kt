@@ -16,5 +16,8 @@ class RTEProtocol {
         const val MEDIA_TYPE_AAC = 0x02
 
         const val DEFAULT_PORT = 32000
+
+        val SENDER_SESSION_TYPE = "sender"
+        val RECEIVER_SESSION_TYPE = "receiver"
     }
 }

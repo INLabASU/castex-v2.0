@@ -1,11 +1,13 @@
 package rte.packetization
 
 import android.graphics.Bitmap
+import android.util.Log
 import rte.RTEFrame
 import rte.RTEPacket
 import rte.RTEProtocol
 import rte.session.RTESession
 import java.io.ByteArrayOutputStream
+import java.lang.Thread.sleep
 import java.net.DatagramPacket
 
 /**
@@ -38,24 +40,28 @@ open class RTEJpegPacketizer(session:RTESession): RTEPacketizer(), Runnable{
      */
     override fun run() {
         var currentImage: RTEFrame?
+        while(true) {
+            sleep(5)
 
-        // Skip this run if there are no images in the queue.
-        if(images.isEmpty()){
-            return
-        }
+            // Skip this run if there are no images in the queue.
+            if (images.isEmpty()) {
+                continue
+            }
 
-        currentImage = images.removeAt(0)
-        if(prevImage != null){
-            prevImage!!.bitmap.recycle()
-        }
-        prevImage = currentImage
+            currentImage = images.removeAt(0)
+            if (prevImage != null) {
+                prevImage!!.bitmap.recycle()
+            }
+            prevImage = currentImage
 
-        // Prepare the frame as several UDP packets.
-        val packets:ArrayList<DatagramPacket> = packetize(currentImage, RTEProtocol.RTE_STANDARD_PACKET_LENGTH)!!
+            // Prepare the frame as several UDP packets.
+            val packets: ArrayList<DatagramPacket> = packetize(currentImage, RTEProtocol.RTE_STANDARD_PACKET_LENGTH)
+            Log.d(TAG, "Sending " + packets.size + " packets.")
 
-        // Send out frames on UDP socket.
-        for(p in packets){
-            session!!.vSock?.send(p)
+            // Send out frames on UDP socket.
+            for (p in packets) {
+                session!!.vSock?.send(p)
+            }
         }
     }
 

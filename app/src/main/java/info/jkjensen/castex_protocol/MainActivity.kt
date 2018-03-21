@@ -24,6 +24,7 @@ import android.view.WindowManager
 import rte.packetization.RTEJpegPacketizer
 import kotlinx.android.synthetic.main.activity_main.*
 import org.jetbrains.anko.mediaProjectionManager
+import rte.ScreenCapturerService
 import rte.packetization.RTEPacketizer
 import rte.session.RTESession
 import rte.session.RTESessionBuilder
@@ -72,7 +73,7 @@ class MainActivity : AppCompatActivity() {
         metrics = applicationContext.resources.displayMetrics
 
 //        group1 = InetAddress.getByName("192.168.43.172") // Duo
-        group1 = InetAddress.getByName("192.168.43.15") // Linux Box
+//        group1 = InetAddress.getByName("192.168.43.15") // Linux Box
 //        group1 = InetAddress.getByName("10.26.152.237") // Linux Box
 
 
@@ -106,22 +107,29 @@ class MainActivity : AppCompatActivity() {
         if (requestCode == REQUEST_MEDIA_PROJECTION_CODE) {
             super.onActivityResult(requestCode, resultCode, data)
 
+
+
+
             sessionBuilder
                     .setContext(this)
                     .setMulticastLock(multicastLock!!)
-                    .setReceiverAddress(group1!!)
+                    .setReceiverAddress("192.168.43.15")
                     .setVideoType(RTEProtocol.MEDIA_TYPE_JPEG)
 //                .setAudioType(RTEProtocol.MEDIA_TYPE_AAC)
                     .setStreamHeight(metrics!!.heightPixels/2)
                     .setStreamWidth(metrics!!.widthPixels/2)
                     .setStreamDensity(metrics!!.densityDpi)
                     .setMediaProjectionResults(resultCode, data)
-                    .setup(RTESession.SENDER_SESSION_TYPE)
-//                .start()
+                    .setup(RTEProtocol.SENDER_SESSION_TYPE)
 
-            packetizer = RTEJpegPacketizer(sessionBuilder.session)
+            // Start the screencapturerservice
+            val serviceIntent = Intent(this, ScreenCapturerService::class.java)
+            serviceIntent.putExtra(ScreenCapturerService.MEDIA_PROJECTION_RESULT_CODE, resultCode)
+            serviceIntent.putExtra(ScreenCapturerService.MEDIA_PROJECTION_RESULT_DATA, data)
+            serviceIntent.putExtra(ScreenCapturerService.SESSION_CODE, sessionBuilder.session)
+            startService(serviceIntent)
 
-            // TODO: Call session.start() here
+
         } else if(requestCode == REQUEST_OVERLAY_CODE){
             /* If the result is from the overlay request, we must now request the media projection
                 permissions  */
@@ -137,7 +145,6 @@ class MainActivity : AppCompatActivity() {
      */
     @Synchronized private fun openScreenshot() {
 
-        // TODO: Send all of this functionality into the Packetizer Run() function.
     }
 
     /**

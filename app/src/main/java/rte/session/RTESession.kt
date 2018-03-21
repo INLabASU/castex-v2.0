@@ -5,9 +5,15 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.wifi.WifiManager
+import android.os.Parcel
+import android.os.Parcelable
 import android.support.v4.content.ContextCompat.checkSelfPermission
 import rte.RTEProtocol
+import rte.RTEProtocol.Companion.RECEIVER_SESSION_TYPE
+import rte.RTEProtocol.Companion.SENDER_SESSION_TYPE
 import rte.ScreenCapturerService
+import rte.packetization.RTEH264Packetizer
+import rte.packetization.RTEJpegPacketizer
 import rte.packetization.RTEPacketizer
 import java.io.Serializable
 import java.net.InetAddress
@@ -17,19 +23,16 @@ import java.net.MulticastSocket
  * Created by jk on 3/13/18.
  * A streaming session for the RTE Protocol and its associated data.
  */
-class RTESession:Serializable{
-    companion object {
-        const val SENDER_SESSION_TYPE = "sender"
-        const val RECEIVER_SESSION_TYPE = "receiver"
-    }
+class RTESession() :Parcelable{
 
     var sessionType: String? = null
     var context: Context? = null
-    var multicastLock: WifiManager.MulticastLock? = null
+    var multicastLockHeld: Boolean = false
     // Video socket
     var vSock: MulticastSocket? = null
     // Audio socket
     var aSock: MulticastSocket? = null
+    var receiverAddressStr:String? = null
     var receiverAddress:InetAddress? = null
     var receiverPort:Int? = RTEProtocol.DEFAULT_PORT
     var packetizer: RTEPacketizer? = null
@@ -41,16 +44,49 @@ class RTESession:Serializable{
     var mediaProjectionResultCode: Int? = null
     var mediaProjectionResultData: Intent? = null
 
+    constructor(parcel: Parcel) : this() {
+        sessionType = parcel.readString()
+        multicastLockHeld = (parcel.readByte().toInt()) != 0
+        receiverAddressStr = parcel.readString()
+        receiverPort = parcel.readValue(Int::class.java.classLoader) as? Int
+        videoType = parcel.readValue(Int::class.java.classLoader) as? Int
+        audioType = parcel.readValue(Int::class.java.classLoader) as? Int
+        streamWidth = parcel.readValue(Int::class.java.classLoader) as? Int
+        streamHeight = parcel.readValue(Int::class.java.classLoader) as? Int
+        videoDensity = parcel.readValue(Int::class.java.classLoader) as? Int
+        mediaProjectionResultCode = parcel.readValue(Int::class.java.classLoader) as? Int
+        mediaProjectionResultData = parcel.readParcelable(Intent::class.java.classLoader)
+    }
+
     /**
      * Initializes the session with the given parameters.
      */
     fun start(){
 
-        val serviceIntent = Intent(context, ScreenCapturerService::class.java)
-        serviceIntent.putExtra(ScreenCapturerService.MEDIA_PROJECTION_RESULT_CODE, this.mediaProjectionResultCode)
-        serviceIntent.putExtra(ScreenCapturerService.MEDIA_PROJECTION_RESULT_DATA, this.mediaProjectionResultData)
-        serviceIntent.putExtra(ScreenCapturerService.SESSION_CODE, this)
-        context!!.startService(serviceIntent)
+        when(videoType){
+            RTEProtocol.MEDIA_TYPE_JPEG -> {
+                this.packetizer = RTEJpegPacketizer(this)
+            } RTEProtocol.MEDIA_TYPE_H264 -> {
+            this.packetizer = RTEH264Packetizer(this)
+        }
+            else -> throw Exception("Invalid video type for rte.session.RTESessionBuilder.setMediaType()")
+        }
+
+        if(this.videoType != null){
+            this.vSock = MulticastSocket()
+            this.vSock!!.reuseAddress = true
+        }
+        if(this.audioType != null){
+            this.aSock = MulticastSocket()
+            this.aSock!!.reuseAddress = true
+        }
+
+        if(this.receiverAddressStr != null){
+            this.receiverAddress = InetAddress.getByName(receiverAddressStr)
+        } else{
+            // If the address for the receiver is not set, set it to a default multicast address.
+            this.receiverAddress = InetAddress.getByName("224.0.0.1")
+        }
 
         packetizer!!.start()
 
@@ -99,10 +135,7 @@ class RTESession:Serializable{
                 }
             }
             RECEIVER_SESSION_TYPE ->{
-                if(multicastLock == null){
-                    throw Exception("No multicastLock set. Set the session multicastLock by calling " +
-                            "SessionBuilder.setMulticastLock().")
-                } else if(!multicastLock!!.isHeld){
+                if(!multicastLockHeld){
                     throw Exception("The MulticastLock associated with this session is not held." +
                             "MulticastLock.acquire() must be called for the session to be startable.")
                 }
@@ -112,6 +145,34 @@ class RTESession:Serializable{
                     "the session type as sender or receiver.")
         }
         return true
+    }
+
+    override fun writeToParcel(parcel: Parcel, flags: Int) {
+        parcel.writeString(sessionType)
+        parcel.writeByte(if(!multicastLockHeld) 0 else 1)
+        parcel.writeString(receiverAddressStr)
+        parcel.writeValue(receiverPort)
+        parcel.writeValue(videoType)
+        parcel.writeValue(audioType)
+        parcel.writeValue(streamWidth)
+        parcel.writeValue(streamHeight)
+        parcel.writeValue(videoDensity)
+        parcel.writeValue(mediaProjectionResultCode)
+        parcel.writeParcelable(mediaProjectionResultData, flags)
+    }
+
+    override fun describeContents(): Int {
+        return 0
+    }
+
+    companion object CREATOR : Parcelable.Creator<RTESession> {
+        override fun createFromParcel(parcel: Parcel): RTESession {
+            return RTESession(parcel)
+        }
+
+        override fun newArray(size: Int): Array<RTESession?> {
+            return arrayOfNulls(size)
+        }
     }
 
 }

@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">castex_protocol</string>
+    <string name="notification_title">Castex</string>
+    <string name="notification_message">Sharing screen</string>
 </resources>
