@@ -108,6 +108,37 @@ class RTESessionBuilder {
     }
 
     /**
+     * Required only for transmitter.
+     *
+     * Set the stream bitrate.
+     *
+     * @return this RTESessionBuilder for function chaining.
+     */
+    fun setStreamBitrate(bitrate:Int): RTESessionBuilder{
+        if(bitrate <= 0){
+            throw Exception("Invalid stream bitrate")
+        }
+        this.session.bitrate = bitrate
+        return this
+    }
+
+
+    /**
+     * Required only for transmitter. Required only for streams including video.
+     *
+     * Set the stream frame rate.
+     *
+     * @return this RTESessionBuilder for function chaining.
+     */
+    fun setStreamFramerate(framerate:Int): RTESessionBuilder{
+        if(framerate <= 0){
+            throw Exception("Invalid stream frame rate.")
+        }
+        this.session.framerate = framerate
+        return this
+    }
+
+    /**
      * Required for both transmitter and receiver.
      *
      * Set the video type of this session.

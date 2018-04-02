@@ -17,6 +17,9 @@ class RTEProtocol {
 
         const val DEFAULT_PORT = 32000
 
+        const val DEFAULT_VIDEO_BITRATE = 1000000
+        const val DEFAULT_VIDEO_FRAME_RATE = 15
+
         val SENDER_SESSION_TYPE = "sender"
         val RECEIVER_SESSION_TYPE = "receiver"
     }

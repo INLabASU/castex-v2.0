@@ -79,6 +79,8 @@ open class RTEJpegPacketizer(session:RTESession): RTEPacketizer(), Runnable{
 
             val starttime = System.currentTimeMillis()
             val baos = ByteArrayOutputStream()
+            // Make sure that if the bitmap has already been recycled we don't try to use it.
+            if(rteFrame.bitmap.isRecycled) return arrayListOf()
             rteFrame.bitmap.compress(Bitmap.CompressFormat.JPEG, 50, baos)
             val outputData = baos.toByteArray()
             val dGramPackets = arrayListOf<DatagramPacket>()

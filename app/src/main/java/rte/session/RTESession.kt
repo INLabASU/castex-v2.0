@@ -41,6 +41,9 @@ class RTESession() :Parcelable{
     var streamWidth: Int? = null
     var streamHeight: Int? = null
     var videoDensity: Int? = null
+    var bitrate: Int? = RTEProtocol.DEFAULT_VIDEO_BITRATE
+    var framerate: Int? = RTEProtocol.DEFAULT_VIDEO_FRAME_RATE
+
     var mediaProjectionResultCode: Int? = null
     var mediaProjectionResultData: Intent? = null
 
@@ -54,6 +57,8 @@ class RTESession() :Parcelable{
         streamWidth = parcel.readValue(Int::class.java.classLoader) as? Int
         streamHeight = parcel.readValue(Int::class.java.classLoader) as? Int
         videoDensity = parcel.readValue(Int::class.java.classLoader) as? Int
+        bitrate = parcel.readValue(Int::class.java.classLoader) as? Int
+        framerate = parcel.readValue(Int::class.java.classLoader) as? Int
         mediaProjectionResultCode = parcel.readValue(Int::class.java.classLoader) as? Int
         mediaProjectionResultData = parcel.readParcelable(Intent::class.java.classLoader)
     }
@@ -157,6 +162,8 @@ class RTESession() :Parcelable{
         parcel.writeValue(streamWidth)
         parcel.writeValue(streamHeight)
         parcel.writeValue(videoDensity)
+        parcel.writeValue(bitrate)
+        parcel.writeValue(framerate)
         parcel.writeValue(mediaProjectionResultCode)
         parcel.writeParcelable(mediaProjectionResultData, flags)
     }
