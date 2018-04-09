@@ -6,8 +6,15 @@ package rte
  */
 class RTEProtocol {
     companion object {
+
+        const val MTU = 1300
+        // Maximum size of RTE packets
+        const val MAX_PACKET_SIZE = MTU - 28
+
         const val RTE_STANDARD_PACKET_LENGTH = 1024
         const val DEFAULT_PACKET_SIZE = 1024
+        const val HEADER_SIZE = 48 // Bytes
+
         const val PACKET_MAGIC:Long = 0x87654321
 
         const val MEDIA_TYPE_JPEG = 0x01

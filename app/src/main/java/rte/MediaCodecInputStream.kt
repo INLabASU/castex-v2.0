@@ -38,7 +38,7 @@ class MediaCodecInputStream(mediaCodec: MediaCodec) : InputStream() {
 
     private var mMediaCodec: MediaCodec? = null
     val lastBufferInfo = MediaCodec.BufferInfo()
-    private var mBuffers: Array<ByteBuffer>? = null
+//    private var mBuffers: Array<ByteBuffer>? = null
     private var mBuffer: ByteBuffer? = null
     private var mIndex = MediaCodec.INFO_TRY_AGAIN_LATER
     private var mClosed = false
@@ -47,7 +47,7 @@ class MediaCodecInputStream(mediaCodec: MediaCodec) : InputStream() {
 
     init {
         mMediaCodec = mediaCodec
-        mBuffers = mMediaCodec!!.outputBuffers
+//        mBuffers = mMediaCodec!!.outputBuffers
     }
 
     override fun close() {
@@ -70,11 +70,12 @@ class MediaCodecInputStream(mediaCodec: MediaCodec) : InputStream() {
                     //					Log.d("PreviewTest", "Index: " + mIndex);
                     if (mIndex >= 0) {
                         //						Log.d(TAG,"Index: "+mIndex+" Time: "+mBufferInfo.presentationTimeUs+" size: "+mBufferInfo.size);
+                        Log.d(TAG, "Getting output from buffer $mIndex")
                         mBuffer = mMediaCodec!!.getOutputBuffer(mIndex)
                         mBuffer!!.position(0)
                         break
                     } else if (mIndex == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED) {
-                        mBuffers = mMediaCodec!!.outputBuffers
+//                        mBuffers = mMediaCodec!!.outputBuffers
                         Log.i(TAG, "Buffers changed")
                     } else if (mIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
 //                        mMediaFormat = mMediaCodec!!.outputFormat

@@ -40,7 +40,7 @@ open class RTEJpegPacketizer(session:RTESession): RTEPacketizer(), Runnable{
      */
     override fun run() {
         var currentImage: RTEFrame?
-        while(true) {
+        while(runnerThread?.isInterrupted == false) {
             sleep(5)
 
             // Skip this run if there are no images in the queue.

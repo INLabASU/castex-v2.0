@@ -2,6 +2,7 @@ package rte.session
 
 import android.content.Context
 import android.content.Intent
+import android.media.projection.MediaProjection
 import android.net.wifi.WifiManager
 import android.util.Log
 import rte.RTEProtocol
@@ -215,7 +216,7 @@ class RTESessionBuilder {
         return this
     }
 
-    fun start(){
-        this.session.start()
+    fun start(mediaProjection: MediaProjection){
+        this.session.start(mediaProjection)
     }
 }

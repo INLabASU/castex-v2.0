@@ -183,57 +183,61 @@ class ScreenCapturerService: IntentService("ScreenCaptureService") {
 
         session = intent.getParcelableExtra(SESSION_CODE)
         session!!.context = applicationContext
-        session!!.start()
+        session!!.start(mediaProjection!!)
 
-        // Create a new thread to run all capturing on.
-        captureThread = Thread{
-            Looper.prepare()
-            handler = Handler()
-            Looper.loop()
-        }
-        captureThread!!.start()
 
-        imageReader = ImageReader.newInstance(session!!.streamWidth!!, session!!.streamHeight!!, PixelFormat.RGBA_8888, 5)
-        val virtualDisplay = mediaProjection!!.createVirtualDisplay("test", session!!.streamWidth!!, session!!.streamHeight!!,session!!.videoDensity!!,
-                WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
-                imageReader!!.surface, null, handler)
-        var image: Image?
-        var bitmap: Bitmap?
-        Log.d(MainActivity.TAG, "Writing timing log to " + filesDir.absolutePath + "/screenCaptureTiming.txt")
-        imageReader!!.setOnImageAvailableListener({
-            image = null
-            bitmap = null
-            if(!captureThread!!.isInterrupted) {
+        // TODO: Separate this out into JPEG-specific stuff
+        if(session!!.videoType == RTEProtocol.MEDIA_TYPE_JPEG) {
+            // Create a new thread to run all capturing on.
+            captureThread = Thread {
+                Looper.prepare()
+                handler = Handler()
+                Looper.loop()
+            }
+            captureThread!!.start()
 
-                try {
-                    image = imageReader!!.acquireLatestImage() ?: throw Exception("Failed to get latest image")
-                    val planes = image!!.planes
-                    val buffer = planes[0].buffer ?: throw Exception("Failed to get image buffer")
+            imageReader = ImageReader.newInstance(session!!.streamWidth!!, session!!.streamHeight!!, PixelFormat.RGBA_8888, 5)
+            val virtualDisplay = mediaProjection!!.createVirtualDisplay("test", session!!.streamWidth!!, session!!.streamHeight!!, session!!.videoDensity!!,
+                    WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                    imageReader!!.surface, null, handler)
+            var image: Image?
+            var bitmap: Bitmap?
+            Log.d(MainActivity.TAG, "Writing timing log to " + filesDir.absolutePath + "/screenCaptureTiming.txt")
+            imageReader!!.setOnImageAvailableListener({
+                image = null
+                bitmap = null
+                if (!captureThread!!.isInterrupted) {
 
-                    // For debugging, write timestamps to a text file for external timing analysis
+                    try {
+                        image = imageReader!!.acquireLatestImage() ?: throw Exception("Failed to get latest image")
+                        val planes = image!!.planes
+                        val buffer = planes[0].buffer
+                                ?: throw Exception("Failed to get image buffer")
+
+                        // For debugging, write timestamps to a text file for external timing analysis
 //                    fos?.write(((System.currentTimeMillis() - startTime).toString() + "\n").toByteArray())
 
-                    buffer.rewind()
-                    val pixelStride = planes[0].pixelStride
-                    val rowStride = planes[0].rowStride
-                    val rowPadding = rowStride - pixelStride * image!!.width
-                    bitmap = Bitmap.createBitmap(image!!.width + rowPadding / pixelStride, image!!.height, Bitmap.Config.ARGB_8888)
-                    bitmap!!.copyPixelsFromBuffer(buffer)
+                        buffer.rewind()
+                        val pixelStride = planes[0].pixelStride
+                        val rowStride = planes[0].rowStride
+                        val rowPadding = rowStride - pixelStride * image!!.width
+                        bitmap = Bitmap.createBitmap(image!!.width + rowPadding / pixelStride, image!!.height, Bitmap.Config.ARGB_8888)
+                        bitmap!!.copyPixelsFromBuffer(buffer)
 //                    Log.d(TAG, "Adding image with fid: $fid")
-                    val timestamp = System.nanoTime() / 1000
-                    (session!!.packetizer as RTEJpegPacketizer).images.add(RTEFrame(bitmap!!, fid, timestamp))
-                    fid++
+                        val timestamp = System.nanoTime() / 1000
+//                    (session!!.packetizer as RTEJpegPacketizer).images.add(RTEFrame(bitmap!!, fid, timestamp))
+                        fid++
 
 
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                } finally {
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    } finally {
 
-                    if (image != null)
-                        image?.close()
+                        if (image != null)
+                            image?.close()
+                    }
                 }
-            }
-        }, handler)
+            }, handler)
 
 //        Thread(Runnable {
 //            while (true) {
@@ -242,6 +246,7 @@ class ScreenCapturerService: IntentService("ScreenCaptureService") {
 //
 //            }
 //        }).start()
+        }
 
         while(true){
             sleep(10)

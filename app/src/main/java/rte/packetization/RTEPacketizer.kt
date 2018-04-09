@@ -10,7 +10,7 @@ import java.net.InetAddress
  * Created by jk on 3/13/18.
  */
 abstract class RTEPacketizer:Runnable {
-    private var runnerThread:Thread? = null
+    internal var runnerThread:Thread? = null
     var inputStream: InputStream? = null
 
     /**

@@ -1,16 +1,10 @@
 package info.jkjensen.castex_protocol
 
-import rte.RTEFrame
-import rte.RTEProtocol
 import android.Manifest.permission.READ_EXTERNAL_STORAGE
 import android.Manifest.permission.WRITE_EXTERNAL_STORAGE
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
-import android.graphics.Bitmap
-import android.graphics.PixelFormat
-import android.media.Image
-import android.media.ImageReader
 import android.net.Uri
 import android.net.wifi.WifiManager
 import android.os.Build
@@ -19,20 +13,14 @@ import android.provider.Settings
 import android.support.v4.app.ActivityCompat
 import android.support.v7.app.AppCompatActivity
 import android.util.DisplayMetrics
-import android.util.Log
-import android.view.WindowManager
-import rte.packetization.RTEJpegPacketizer
 import kotlinx.android.synthetic.main.activity_main.*
 import org.jetbrains.anko.mediaProjectionManager
+import rte.RTEProtocol
 import rte.ScreenCapturerService
 import rte.packetization.RTEPacketizer
-import rte.session.RTESession
 import rte.session.RTESessionBuilder
 import java.io.FileOutputStream
-import java.lang.Thread.sleep
-import java.net.DatagramPacket
 import java.net.InetAddress
-import java.net.MulticastSocket
 
 
 class MainActivity : AppCompatActivity() {
@@ -114,7 +102,7 @@ class MainActivity : AppCompatActivity() {
                     .setContext(this)
                     .setMulticastLock(multicastLock!!)
                     .setReceiverAddress("192.168.43.15")
-                    .setVideoType(RTEProtocol.MEDIA_TYPE_JPEG)
+                    .setVideoType(RTEProtocol.MEDIA_TYPE_H264)
 //                .setAudioType(RTEProtocol.MEDIA_TYPE_AAC)
                     .setStreamHeight(metrics!!.heightPixels/2)
                     .setStreamWidth(metrics!!.widthPixels/2)

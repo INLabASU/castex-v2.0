@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.projection.MediaProjection
 import android.net.wifi.WifiManager
 import android.os.Parcel
 import android.os.Parcelable
@@ -47,6 +48,10 @@ class RTESession() :Parcelable{
     var mediaProjectionResultCode: Int? = null
     var mediaProjectionResultData: Intent? = null
 
+    // The members below are not serialized as part of the session, so they are not to be added
+    // until after the session is part of the screencaptureservice.
+    var mediaProjection:MediaProjection? = null
+
     constructor(parcel: Parcel) : this() {
         sessionType = parcel.readString()
         multicastLockHeld = (parcel.readByte().toInt()) != 0
@@ -66,7 +71,8 @@ class RTESession() :Parcelable{
     /**
      * Initializes the session with the given parameters.
      */
-    fun start(){
+    fun start(mediaProjection: MediaProjection){
+        this.mediaProjection = mediaProjection
 
         when(videoType){
             RTEProtocol.MEDIA_TYPE_JPEG -> {
