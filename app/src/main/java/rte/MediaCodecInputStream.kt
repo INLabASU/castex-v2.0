@@ -23,6 +23,7 @@ import java.io.InputStream
 import java.nio.ByteBuffer
 import android.annotation .SuppressLint
 import android.media.MediaCodec
+import android.media.MediaCodec.BUFFER_FLAG_PARTIAL_FRAME
 import android.media.MediaFormat
 import android.util.Log
 
@@ -70,9 +71,16 @@ class MediaCodecInputStream(mediaCodec: MediaCodec) : InputStream() {
                     //					Log.d("PreviewTest", "Index: " + mIndex);
                     if (mIndex >= 0) {
                         //						Log.d(TAG,"Index: "+mIndex+" Time: "+mBufferInfo.presentationTimeUs+" size: "+mBufferInfo.size);
-                        Log.d(TAG, "Getting output from buffer $mIndex")
+                        if(lastBufferInfo.flags and BUFFER_FLAG_PARTIAL_FRAME != 0){
+                            Log.d(TAG, "Partial frame")
+                            // TODO: Continue to aggregate frames into a full batch until a buffer without this flag. (This doesn't seem to be a problem on the Pixel as it always provides one NAL unit per frame.)
+                        } else{
+                            Log.d(TAG, "not partial with size ${lastBufferInfo.size}")
+                        }
+//                        Log.d(TAG, "Getting output from buffer $mIndex")
                         mBuffer = mMediaCodec!!.getOutputBuffer(mIndex)
                         mBuffer!!.position(0)
+                        countNALs(mBuffer!!)
                         break
                     } else if (mIndex == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED) {
 //                        mBuffers = mMediaCodec!!.outputBuffers
@@ -110,8 +118,24 @@ class MediaCodecInputStream(mediaCodec: MediaCodec) : InputStream() {
     override fun available(): Int {
         return if (mBuffer != null)
             lastBufferInfo.size - mBuffer!!.position()
-        else
-            0
+        else 0
+    }
+
+    fun countNALs(buffer: ByteBuffer){
+        var count = 0
+        var ind = 0
+        val size = buffer.remaining()
+
+        while(ind < size - 3) {
+            if (buffer[ind].toInt() == 0 && buffer[ind + 1].toInt() == 0 && buffer[ind + 2].toInt() == 0 && buffer[ind + 3].toInt() == 1) {
+                count++
+            }
+            ind++
+        }
+
+        if(count > 1) {
+            Log.d(TAG, "Buffer contained $count NAL units")
+        }
     }
 
 }

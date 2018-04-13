@@ -110,7 +110,8 @@ class RTEH264Packetizer(session:RTESession): RTEPacketizer(), Runnable {
         // NAL units are preceeded with 0x00000001
         fill(header, 0, 5)
         ts = (inputStream as MediaCodecInputStream).lastBufferInfo.presentationTimeUs * 1000L
-        naluLength = inputStream!!.available() + 1
+//        frameLength = inputStream!!.available() + 1 // The length of the entire frame buffer. May contain multiple NAL units.
+        naluLength = inputStream!!.available() + 1 // The length of the entire frame buffer. May contain multiple NAL units.
         if (!(header[0].toInt() == 0 && header[1].toInt() == 0 && header[2].toInt() == 0)) {
             // Turns out, the NAL units are not preceeded with 0x00000001
             Log.e(TAG, "NAL units are not preceeded by 0x00000001")
@@ -139,23 +140,24 @@ class RTEH264Packetizer(session:RTESession): RTEPacketizer(), Runnable {
 //            buffer = socket.requestBuffer()
 //            socket.markNextPacket()
 //            socket.updateTimestamp(ts)
-//            System.arraycopy(stapa, 0, buffer, rtphl, stapa.size)
+            System.arraycopy(stapa, 0, buffer, RTEProtocol.RTE_HEADER_LENGTH, stapa!!.size)
 //            super.send(rtphl + stapa.size)
         }
 
-//        // Small NAL unit => Send a single NAL unit
-//        if (naluLength <= RTEProtocol.MAX_PACKET_SIZE - RTEProtocol.HEADER_SIZE - 2) {
+        // Small NAL unit => Send a single NAL unit
+        if (naluLength <= RTEProtocol.MAX_PACKET_SIZE - RTEProtocol.RTE_HEADER_LENGTH - 2) {
 //            buffer = socket.requestBuffer()
 //            buffer[rtphl] = header[4]
-//            len = fill(buffer, rtphl + 1, naluLength - 1)
+            buffer = ByteArray(RTEProtocol.MTU)
+            val len = fill(buffer!!, RTEProtocol.RTE_HEADER_LENGTH + 1, naluLength - 1)
 //            socket.updateTimestamp(ts)
 //            socket.markNextPacket()
 //            super.send(naluLength + rtphl)
-//            //Log.d(TAG,"----- Single NAL unit - len:"+len+" delay: "+delay);
-//        } else {  // Large NAL unit => Split nal unit
-//
+            //Log.d(TAG,"----- Single NAL unit - len:"+len+" delay: "+delay);
+        } else {  // Large NAL unit => Split nal unit
+
 //            // Set FU-A header
-//            header[1] = (header[4] and 0x1F).toByte()  // FU header type
+            header[1] = (header[4].toInt() and 0x1F).toByte()  // FU header type
 //            header[1] += 0x80 // Start bit
 //            // Set FU-A indicator
 //            header[0] = (header[4] and 0x60 and 0xFF).toByte() // FU indicator NRI
@@ -163,6 +165,7 @@ class RTEH264Packetizer(session:RTESession): RTEPacketizer(), Runnable {
 //
 //            while (sum < naluLength) {
 //                buffer = socket.requestBuffer()
+                    buffer = ByteArray(RTEProtocol.MTU)
 //                buffer[rtphl] = header[0]
 //                buffer[rtphl + 1] = header[1]
 //                socket.updateTimestamp(ts)
@@ -179,7 +182,7 @@ class RTEH264Packetizer(session:RTESession): RTEPacketizer(), Runnable {
 //                header[1] = (header[1] and 0x7F).toByte()
 //                //Log.d(TAG,"----- FU-A unit, sum:"+sum);
 //            }
-//        }// Large NAL unit => Split nal unit
+        }// Large NAL unit => Split nal unit
     }
 
     private fun fill(buffer: ByteArray, offset: Int, length: Int): Int {

@@ -13,7 +13,7 @@ class RTEProtocol {
 
         const val RTE_STANDARD_PACKET_LENGTH = 1024
         const val DEFAULT_PACKET_SIZE = 1024
-        const val HEADER_SIZE = 48 // Bytes
+        const val RTE_HEADER_LENGTH = 48 // Bytes
 
         const val PACKET_MAGIC:Long = 0x87654321
 
