@@ -9,6 +9,7 @@ import android.view.Surface
 import android.view.WindowManager
 import rte.MediaCodecInputStream
 import rte.RTEFrame
+import rte.RTEPacket
 import rte.RTEProtocol
 import rte.session.RTESession
 import java.io.IOException
@@ -25,15 +26,19 @@ class RTEH264Packetizer(session:RTESession): RTEPacketizer(), Runnable {
     private val mediaCodec: MediaCodec = MediaCodec.createEncoderByType("video/avc")
     private val session:RTESession = session
 
-    private var buffer: ByteArray? = null
+    private var sendBuffer: ByteArray? = null
     private var naluLength = 0
     private var header = ByteArray(5)
     private var ts: Long = 0
     private var count = 0
     private var sps: ByteArray? = null
     private var pps:ByteArray? = null
+    private var packetSize: Int = 0
+    private var fid: Int = 0
 
+    //A STAP-A NAL (NAL type 24) containing the sps and pps of the stream
     private var stapa: ByteArray? = null
+    private lateinit var params: ByteArray
 
 
     init{
@@ -99,6 +104,7 @@ class RTEH264Packetizer(session:RTESession): RTEPacketizer(), Runnable {
     }
 
     override fun run() {
+        this.packetSize = RTEProtocol.RTE_STANDARD_PACKET_LENGTH
         while(runnerThread?.isInterrupted == false) {
             sendNalUnit()
         }
@@ -126,6 +132,18 @@ class RTEH264Packetizer(session:RTESession): RTEPacketizer(), Runnable {
         // to add them to the stream ourselves
         if (type == 7 || type == 8) {
             Log.v(TAG, "SPS or PPS present in the stream.")
+            params = ByteArray(naluLength)
+            System.arraycopy(header, 0, params, 0, header.size)
+            // Get both sps and pps NAL units.
+            val len = fill(params, header.size, naluLength - 1)
+            // Send parameters over socket.
+            val dGramPackets = getPackets(params)
+            // Send out frames on UDP socket.
+            for (p in dGramPackets) {
+                session.vSock!!.send(p)
+            }
+            fid++
+
             count++
             if (count > 4) {
                 sps = null
@@ -133,23 +151,30 @@ class RTEH264Packetizer(session:RTESession): RTEPacketizer(), Runnable {
             }
         }
 
-        // We send two packets containing NALU type 7 (SPS) and 8 (PPS)
-        // Those should allow the H264 stream to be decoded even if no SDP was sent to the decoder.
-        if (type == 5 && sps != null && pps != null) {
-            //TODO: fix this
-//            buffer = socket.requestBuffer()
-//            socket.markNextPacket()
-//            socket.updateTimestamp(ts)
-            System.arraycopy(stapa, 0, buffer, RTEProtocol.RTE_HEADER_LENGTH, stapa!!.size)
-//            super.send(rtphl + stapa.size)
-        }
+//        // We send two packets containing NALU type 7 (SPS) and 8 (PPS)
+//        // Those should allow the H264 stream to be decoded even if no SDP was sent to the decoder.
+//        if (type == 5 && sps != null && pps != null) {
+//            //TODO: fix this
+////            buffer = socket.requestBuffer()
+////            socket.markNextPacket()
+////            socket.updateTimestamp(ts)
+//            sendBuffer = ByteArray(RTEProtocol.MTU)
+//            System.arraycopy(stapa, 0, sendBuffer, 0, stapa!!.size)
+////            super.send(rtphl + stapa.size)
+//            val dGramPackets = getPackets(sendBuffer!!)
+//            // Send out frames on UDP socket.
+//            for (p in dGramPackets) {
+//                session.vSock!!.send(p)
+//            }
+//            fid++
+//        }
 
         // Small NAL unit => Send a single NAL unit
         if (naluLength <= RTEProtocol.MAX_PACKET_SIZE - RTEProtocol.RTE_HEADER_LENGTH - 2) {
 //            buffer = socket.requestBuffer()
 //            buffer[rtphl] = header[4]
-            buffer = ByteArray(RTEProtocol.MTU)
-            val len = fill(buffer!!, RTEProtocol.RTE_HEADER_LENGTH + 1, naluLength - 1)
+            sendBuffer = ByteArray(RTEProtocol.MTU)
+            val len = fill(sendBuffer!!, 0, naluLength - 1)
 //            socket.updateTimestamp(ts)
 //            socket.markNextPacket()
 //            super.send(naluLength + rtphl)
@@ -157,32 +182,40 @@ class RTEH264Packetizer(session:RTESession): RTEPacketizer(), Runnable {
         } else {  // Large NAL unit => Split nal unit
 
 //            // Set FU-A header
-            header[1] = (header[4].toInt() and 0x1F).toByte()  // FU header type
+//            header[1] = (header[4].toInt() and 0x1F).toByte()  // FU header type
 //            header[1] += 0x80 // Start bit
 //            // Set FU-A indicator
 //            header[0] = (header[4] and 0x60 and 0xFF).toByte() // FU indicator NRI
 //            header[0] += 28
 //
-//            while (sum < naluLength) {
+            var sum = 1
+            while (sum < naluLength) {
 //                buffer = socket.requestBuffer()
-                    buffer = ByteArray(RTEProtocol.MTU)
+                sendBuffer = ByteArray(RTEProtocol.MTU)
 //                buffer[rtphl] = header[0]
 //                buffer[rtphl + 1] = header[1]
 //                socket.updateTimestamp(ts)
-//                if ((len = fill(buffer, rtphl + 2, if (naluLength - sum > MAXPACKETSIZE - rtphl - 2) MAXPACKETSIZE - rtphl - 2 else naluLength - sum)) < 0) return
-//                sum += len
-//                // Last packet before next NAL
+                val len = fill(sendBuffer!!, 0, if (naluLength - sum > RTEProtocol.MAX_PACKET_SIZE) RTEProtocol.MAX_PACKET_SIZE else naluLength - sum)
+                if (len < 0) return
+                sum += len
+//                // Last packet before next NAL TODO: I think this is an RTP thing/ not necessary at this level.
 //                if (sum >= naluLength) {
 //                    // End bit on
-//                    buffer[rtphl + 1] += 0x40
-//                    socket.markNextPacket()
+//                    sendBuffer!![0] = (0x40 + sendBuffer!![0]).toByte()
+////                    socket.markNextPacket()
 //                }
 //                super.send(len + rtphl + 2)
 //                // Switch start bit
 //                header[1] = (header[1] and 0x7F).toByte()
 //                //Log.d(TAG,"----- FU-A unit, sum:"+sum);
-//            }
+            }
         }// Large NAL unit => Split nal unit
+        val dGramPackets = getPackets(sendBuffer!!)
+        // Send out frames on UDP socket.
+        for (p in dGramPackets) {
+            session.vSock!!.send(p)
+        }
+        fid++
     }
 
     private fun fill(buffer: ByteArray, offset: Int, length: Int): Int {
@@ -196,6 +229,55 @@ class RTEH264Packetizer(session:RTESession): RTEPacketizer(), Runnable {
                 sum += len
         }
         return sum
+    }
+
+    private fun getPackets(buffer: ByteArray): ArrayList<DatagramPacket> {
+
+        if(session == null){
+            throw Exception("No session associated with H264 Packetizer")
+        } else {
+
+//            val starttime = System.currentTimeMillis()
+            val dGramPackets = arrayListOf<DatagramPacket>()
+//            return DatagramPacket(outputData, outputData.size, group, CastexPreferences.PORT_OUT)
+
+            var pid = 0 // Packet ID for this frame.
+            var offset = 0 // Offset of the current packet within this frame.
+            var frameSize = buffer.size
+            var bytesRemaining = frameSize // The remaining number of bytes left to send
+            var packetLength = if (bytesRemaining >= packetSize) packetSize else bytesRemaining
+
+            while (offset < frameSize) {
+                val packet = RTEPacket()
+
+                packet.header.magic = RTEProtocol.PACKET_MAGIC
+                packet.header.type = session.videoType!!
+
+                packet.fid = this.fid
+                packet.totalLength = frameSize
+                packet.pid = pid
+                // Number of packets is equal to the ratio of frame size to packet size plus an
+                // additional packet if there is a remainder.
+                packet.totalPackets = (frameSize / packetSize) + (if (frameSize % packetSize > 0) 1 else 0)
+                packet.offset = offset
+                packet.length = packetLength
+                packet.timestamp = System.nanoTime() / 1000 // TODO: See if setting this earlier improves performance
+
+                packet.data = buffer.slice(offset..(offset + packetLength)).toByteArray()
+                packet.header.length = RTEProtocol.RTE_STANDARD_PACKET_LENGTH + packet.data.size /* size of header+packet w/o data + size of data */
+                val serialized = packet.serialize()
+                val dGramPacket = DatagramPacket(serialized, serialized!!.size, session.receiverAddress, session.receiverPort!!)
+                dGramPackets.add(dGramPacket)
+
+                pid++
+                offset += packetLength
+                bytesRemaining -= packetLength
+                packetLength = if (bytesRemaining >= packetSize) packetSize else bytesRemaining
+            }
+
+//            Log.d(TAG, "Packetization process took " + (System.currentTimeMillis() - starttime).toString() + "ms")
+            return dGramPackets
+        }
     }
 
     /**

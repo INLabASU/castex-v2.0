@@ -77,7 +77,7 @@ open class RTEJpegPacketizer(session:RTESession): RTEPacketizer(), Runnable{
             throw Exception("No session associated with JPEG Packetizer")
         } else {
 
-            val starttime = System.currentTimeMillis()
+//            val starttime = System.currentTimeMillis()
             val baos = ByteArrayOutputStream()
             // Make sure that if the bitmap has already been recycled we don't try to use it.
             if(rteFrame.bitmap.isRecycled) return arrayListOf()
@@ -96,7 +96,6 @@ open class RTEJpegPacketizer(session:RTESession): RTEPacketizer(), Runnable{
                 val packet = RTEPacket()
 
                 packet.header.magic = RTEProtocol.PACKET_MAGIC
-                // TODO: fix this to put the right (audio/video) header field
                 packet.header.type = session!!.videoType!!
 
                 packet.fid = rteFrame.fid
