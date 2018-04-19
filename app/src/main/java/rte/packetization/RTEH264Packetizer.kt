@@ -132,7 +132,7 @@ class RTEH264Packetizer(session:RTESession): RTEPacketizer(), Runnable {
         // to add them to the stream ourselves
         if (type == 7 || type == 8) {
             Log.v(TAG, "SPS or PPS present in the stream.")
-            params = ByteArray(naluLength)
+            params = ByteArray(30)
             System.arraycopy(header, 0, params, 0, header.size)
             // Get both sps and pps NAL units.
             val len = fill(params, header.size, naluLength - 1)
@@ -173,7 +173,7 @@ class RTEH264Packetizer(session:RTESession): RTEPacketizer(), Runnable {
         if (naluLength <= RTEProtocol.MAX_PACKET_SIZE - RTEProtocol.RTE_HEADER_LENGTH - 2) {
 //            buffer = socket.requestBuffer()
 //            buffer[rtphl] = header[4]
-            sendBuffer = ByteArray(RTEProtocol.MTU)
+            sendBuffer = ByteArray(naluLength)
             val len = fill(sendBuffer!!, 0, naluLength - 1)
 //            socket.updateTimestamp(ts)
 //            socket.markNextPacket()
@@ -191,11 +191,12 @@ class RTEH264Packetizer(session:RTESession): RTEPacketizer(), Runnable {
             var sum = 1
             while (sum < naluLength) {
 //                buffer = socket.requestBuffer()
-                sendBuffer = ByteArray(RTEProtocol.MTU)
+                val bufSize = (if (naluLength - sum > RTEProtocol.MAX_PACKET_SIZE) RTEProtocol.MAX_PACKET_SIZE else naluLength - sum)
+                sendBuffer = ByteArray(bufSize)
 //                buffer[rtphl] = header[0]
 //                buffer[rtphl + 1] = header[1]
 //                socket.updateTimestamp(ts)
-                val len = fill(sendBuffer!!, 0, if (naluLength - sum > RTEProtocol.MAX_PACKET_SIZE) RTEProtocol.MAX_PACKET_SIZE else naluLength - sum)
+                val len = fill(sendBuffer!!, 0, bufSize)
                 if (len < 0) return
                 sum += len
 //                // Last packet before next NAL TODO: I think this is an RTP thing/ not necessary at this level.
@@ -263,7 +264,10 @@ class RTEH264Packetizer(session:RTESession): RTEPacketizer(), Runnable {
                 packet.length = packetLength
                 packet.timestamp = System.nanoTime() / 1000 // TODO: See if setting this earlier improves performance
 
-                packet.data = buffer.slice(offset..(offset + packetLength)).toByteArray()
+                val outData = ByteArray(packetLength)
+                System.arraycopy(buffer, offset, outData, 0, packetLength)
+                packet.data = outData
+//                packet.data = buffer.sliceArray(offset..(offset + packetLength))
                 packet.header.length = RTEProtocol.RTE_STANDARD_PACKET_LENGTH + packet.data.size /* size of header+packet w/o data + size of data */
                 val serialized = packet.serialize()
                 val dGramPacket = DatagramPacket(serialized, serialized!!.size, session.receiverAddress, session.receiverPort!!)

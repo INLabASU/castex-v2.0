@@ -101,7 +101,9 @@ class MainActivity : AppCompatActivity() {
             sessionBuilder
                     .setContext(this)
                     .setMulticastLock(multicastLock!!)
-                    .setReceiverAddress("192.168.43.15")
+                    .setReceiverAddress("192.168.43.15") // Intel nuc
+//                    .setReceiverAddress("192.168.43.81") // Anirban's
+//                    .setReceiverAddress("192.168.43.20") // iMac
                     .setVideoType(RTEProtocol.MEDIA_TYPE_H264)
 //                .setAudioType(RTEProtocol.MEDIA_TYPE_AAC)
                     .setStreamHeight(metrics!!.heightPixels/2)
