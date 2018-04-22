@@ -16,8 +16,8 @@ import android.support.v4.app.NotificationCompat
 import android.util.Log
 import android.view.WindowManager
 import android.widget.Toast
-import info.jkjensen.castex_protocol.MainActivity
-import info.jkjensen.castex_protocol.R
+import info.jkjensen.castexv2.MainActivity
+import info.jkjensen.castexv2.R
 import org.jetbrains.anko.mediaProjectionManager
 import rte.packetization.RTEJpegPacketizer
 import rte.session.RTESession
