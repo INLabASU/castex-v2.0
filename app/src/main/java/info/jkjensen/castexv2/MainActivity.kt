@@ -28,7 +28,7 @@ import java.net.InetAddress
 class MainActivity : AppCompatActivity() {
 
     /**
-     * A native method that is implemented by the 'native-lib' native library,
+     * An example native method that is implemented by the 'native-lib' native library,
      * which is packaged with this application.
      */
     external fun stringFromJNI(): String
@@ -39,19 +39,21 @@ class MainActivity : AppCompatActivity() {
         init {
             System.loadLibrary("native-lib")
         }
+
         const val TAG ="info.jkjensen.castex"
+
         private const val REQUEST_MEDIA_PROJECTION_CODE = 101
         private const val REQUEST_OVERLAY_CODE = 201
         private const val REQUEST_FILE_CODE = 301
     }
 
-    // Display metrics for screen attributes
+    /** Display metrics for screen attributes */
     private var metrics: DisplayMetrics? = null
-    // Used for writing stats to a file while debugging
+    /** Used for writing stats to a file while debugging */
     private var fos: FileOutputStream? = null
-    // Used to track timestamps during execution
+    /** Used to track timestamps during execution */
     private var startTime = System.currentTimeMillis()
-    // Sender address TODO: Make this address dynamic.
+    /** Sender address TODO: Make this address dynamic. */
     private var group1: InetAddress? = null
     val sessionBuilder = RTESessionBuilder()
     var packetizer: RTEPacketizer? = null
@@ -101,7 +103,8 @@ class MainActivity : AppCompatActivity() {
         }
 
         receiverButton.setOnClickListener{
-            startActivity<ReceiverActivity>()
+            val receiverIntent = ReceiverActivity.getIntent(this, group1?.hostAddress ?: "")
+            startActivity(receiverIntent)
         }
 
         // Explicitly ask for permission to read/write files (only needed for debugging at this point).
@@ -131,6 +134,9 @@ class MainActivity : AppCompatActivity() {
                     .setStreamDensity(metrics!!.densityDpi)
                     .setMediaProjectionResults(resultCode, data)
                     .setup(RTEProtocol.SENDER_SESSION_TYPE)
+
+            // Check if the setup was successful. If not, the sessionBuilder will provide a useful
+            // message for the user in sessionBuilder.setupSuggestion.
             if(sessionBuilder.setupSuggestion != null){
                 val t = Toast.makeText(this, "Streaming is not allowed. ${sessionBuilder.setupSuggestion}", Toast.LENGTH_LONG)
                 t.show()

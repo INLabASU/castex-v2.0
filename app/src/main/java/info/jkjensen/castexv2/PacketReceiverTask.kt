@@ -9,6 +9,11 @@ import java.nio.ByteBuffer
 import java.util.ArrayList
 import java.net.Socket
 
+/**
+ * This task is used solely for receiving incoming packets on a socket. This task does not do any
+ * processing. Instead it calls @param onPacketReady, a callback function provided by its
+ * instantiator.
+ */
 class PacketReceiverTask constructor(private var clientSocket: DatagramSocket? = null,
                                      private var tcpEnabled:Boolean = false,
                                      private var tcpSock:Socket? = null,
@@ -57,6 +62,7 @@ class PacketReceiverTask constructor(private var clientSocket: DatagramSocket? =
                 buf.compact()
                 dPacket!!.setData(buf.array(), buf.arrayOffset(), buf.limit())
 //                addToQueue(ByteBuffer.wrap(dPacket!!.data, dPacket!!.offset, dPacket!!.length).duplicate())
+                //
                 onPacketReady(dPacket!!)
             } catch (e: IOException) {
                 if (isCancelled) return ""
@@ -68,8 +74,13 @@ class PacketReceiverTask constructor(private var clientSocket: DatagramSocket? =
 
     override fun onCancelled(result: String?) {
         Log.d(TAG, "Task cancelled")
+        clientSocket?.close()
+        tcpSock?.close()
     }
 
+    /**
+     * Used for debugging incoming frames.
+     */
     fun discrepancyTest(buf:ByteBuffer){
 
         val frameNumber = buf.int

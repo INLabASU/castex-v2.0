@@ -1,9 +1,7 @@
 package rte
 
 
-class RTEFrameReceiveBuffer(slots:Int, chunk:Int) {
-    val slotCount = slots
-    val slotSize = chunk
+class RTEFrameReceiveBuffer(val slotCount:Int, val slotSize:Int) {
 
     val map = mutableMapOf<Int, ByteArray>() // https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-map/index.html
 
@@ -41,7 +39,7 @@ class RTEFrameReceiveBuffer(slots:Int, chunk:Int) {
         return false
     }
 
-    class FrameBufferMetaData{
+    inner class FrameBufferMetaData{
         /** the following are only modified at dequeue */
         // Frame ID
         var fid:Long = -1

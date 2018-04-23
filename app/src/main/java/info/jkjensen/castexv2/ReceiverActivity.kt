@@ -1,5 +1,7 @@
 package info.jkjensen.castexv2
 
+import android.content.Context
+import android.content.Intent
 import android.os.AsyncTask
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
@@ -11,20 +13,50 @@ import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.Socket
 
+/**
+ * An activity used to stream content from other devices.
+ */
 class ReceiverActivity : AppCompatActivity() {
+    /**
+     * The task that receives incoming network packets.
+     */
     lateinit var packetReceiverTask:PacketReceiverTask
+
+    /**
+     * The UDP socket used to send data to this device.
+     */
     var clientSocket: DatagramSocket? = null
+
+    /**
+     * The TCP Socket used to send data to this device (unused for now).
+     */
     var tcpSocket: Socket? = null
 
-    var senderIp = "192.168.43.15"
+    /**
+     * The IP Address of the sending device.
+     */
+    var senderIp:String = ""
 
     companion object {
         const val TAG = "ReceiverActivity"
+        const val EXTRA_IP = "ipAddress"
+
+        /**
+         * Gets a new intent for this activity.
+         */
+        fun getIntent(context: Context, ip:String):Intent{
+            return Intent(context, ReceiverActivity::class.java).apply {
+                putExtra(EXTRA_IP, ip)
+            }
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_receiver)
+
+        // Get the IP Address if it was sent from the calling activity.
+        senderIp = intent.getStringExtra(EXTRA_IP) ?: ""
 
         // Start the task to receive packets. When a packet is received, onData is called with the
         // received UDP packet.
@@ -35,7 +67,7 @@ class ReceiverActivity : AppCompatActivity() {
 
             override fun afterTextChanged(p0: Editable?) {
                 senderIp = p0.toString()
-                receiverText.text = "Ready to receive from $p0 now."
+                receiverText.text = if(senderIp == "") "Enter an ip address to begin." else "Ready to receive from $p0 now."
             }
 
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
@@ -44,11 +76,13 @@ class ReceiverActivity : AppCompatActivity() {
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
             }
         })
-        receiverText.text = "Ready to receive from $senderIp now."
+
+        receiverText.text = if(senderIp == "") "Enter an ip address to begin." else "Ready to receive from $senderIp now."
     }
 
     override fun onStop() {
         super.onStop()
+        // Turn off receiving. Closes any associated sockets.
         packetReceiverTask.cancel(true)
     }
 
