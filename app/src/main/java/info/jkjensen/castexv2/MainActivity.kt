@@ -14,8 +14,10 @@ import android.support.v4.app.ActivityCompat
 import android.util.AttributeSet
 import android.util.DisplayMetrics
 import android.view.View
+import android.widget.Toast
 import kotlinx.android.synthetic.main.activity_main.*
 import org.jetbrains.anko.mediaProjectionManager
+import org.jetbrains.anko.startActivity
 import rte.RTEProtocol
 import rte.ScreenCapturerService
 import rte.packetization.RTEPacketizer
@@ -98,6 +100,10 @@ class MainActivity : AppCompatActivity() {
 //            imageReader?.close()
         }
 
+        receiverButton.setOnClickListener{
+            startActivity<ReceiverActivity>()
+        }
+
         // Explicitly ask for permission to read/write files (only needed for debugging at this point).
         ActivityCompat.requestPermissions(this,
                 arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE),
@@ -125,13 +131,17 @@ class MainActivity : AppCompatActivity() {
                     .setStreamDensity(metrics!!.densityDpi)
                     .setMediaProjectionResults(resultCode, data)
                     .setup(RTEProtocol.SENDER_SESSION_TYPE)
-
-            // Start the screencapturerservice
-            val serviceIntent = Intent(this, ScreenCapturerService::class.java)
-            serviceIntent.putExtra(ScreenCapturerService.MEDIA_PROJECTION_RESULT_CODE, resultCode)
-            serviceIntent.putExtra(ScreenCapturerService.MEDIA_PROJECTION_RESULT_DATA, data)
-            serviceIntent.putExtra(ScreenCapturerService.SESSION_CODE, sessionBuilder.session)
-            startService(serviceIntent)
+            if(sessionBuilder.setupSuggestion != null){
+                val t = Toast.makeText(this, "Streaming is not allowed. ${sessionBuilder.setupSuggestion}", Toast.LENGTH_LONG)
+                t.show()
+            }else{
+                // Start the screencapturerservice
+                val serviceIntent = Intent(this, ScreenCapturerService::class.java)
+                serviceIntent.putExtra(ScreenCapturerService.MEDIA_PROJECTION_RESULT_CODE, resultCode)
+                serviceIntent.putExtra(ScreenCapturerService.MEDIA_PROJECTION_RESULT_DATA, data)
+                serviceIntent.putExtra(ScreenCapturerService.SESSION_CODE, sessionBuilder.session)
+                startService(serviceIntent)
+            }
 
 
         } else if(requestCode == REQUEST_OVERLAY_CODE){

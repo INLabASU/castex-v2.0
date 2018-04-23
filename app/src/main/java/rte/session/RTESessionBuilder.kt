@@ -5,6 +5,7 @@ import android.content.Intent
 import android.media.projection.MediaProjection
 import android.net.wifi.WifiManager
 import android.util.Log
+import android.widget.Toast
 import rte.RTEProtocol
 import rte.RTEProtocol.Companion.RECEIVER_SESSION_TYPE
 import rte.RTEProtocol.Companion.SENDER_SESSION_TYPE
@@ -23,6 +24,7 @@ class RTESessionBuilder {
     }
 
     val session = RTESession()
+    val setupSuggestion:String? get() = this.session.setupSuggestion
 
     /**
      * Required for receiver.

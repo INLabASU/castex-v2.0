@@ -9,6 +9,7 @@ import android.net.wifi.WifiManager
 import android.os.Parcel
 import android.os.Parcelable
 import android.support.v4.content.ContextCompat.checkSelfPermission
+import android.util.Log
 import rte.RTEProtocol
 import rte.RTEProtocol.Companion.RECEIVER_SESSION_TYPE
 import rte.RTEProtocol.Companion.SENDER_SESSION_TYPE
@@ -51,6 +52,10 @@ class RTESession() :Parcelable{
     // The members below are not serialized as part of the session, so they are not to be added
     // until after the session is part of the screencaptureservice.
     var mediaProjection:MediaProjection? = null
+
+    private val TAG = "RTESession"
+
+    var setupSuggestion:String? = null
 
     constructor(parcel: Parcel) : this() {
         sessionType = parcel.readString()
@@ -142,7 +147,9 @@ class RTESession() :Parcelable{
                 if(videoType != null && (streamHeight == null || streamWidth == null || videoDensity == null)){
                     throw Exception("Session width, height, and density must be set for video streaming.")
                 } else if(mediaProjectionResultCode == null || mediaProjectionResultData == null){
-                    throw Exception("Transmitter session must include media projection results.")
+                    Log.e(TAG, "Transmitter session must include media projection results.")
+                    setupSuggestion = "Please allow screen sharing permissions."
+                    return false
                 }
             }
             RECEIVER_SESSION_TYPE ->{

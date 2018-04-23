@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".ReceiverActivity">
+
+    <EditText
+        android:id="@+id/receiverEditText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Type the Sender's IP Address here."
+        android:text="192.168.43.15"/>
+
+    <TextView
+        android:id="@+id/receiverText"
+        app:layout_constraintTop_toBottomOf="@id/receiverEditText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        tools:text="This is the receiver"/>
+
+</android.support.constraint.ConstraintLayout>
