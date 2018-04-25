@@ -1,11 +1,15 @@
 package rte
 
+import java.nio.ByteBuffer
+
 
 class RTEFrameReceiveBuffer(val slotCount:Int, val slotSize:Int) {
 
     val map = mutableMapOf<Int, ByteArray>() // https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-map/index.html
+    val buf:MutableList<RTEFrameBufferEntry> = mutableListOf()
 
     var requiresInit = true
+    var startTime:Long = -1
 
     init{
 
@@ -39,7 +43,7 @@ class RTEFrameReceiveBuffer(val slotCount:Int, val slotSize:Int) {
         return false
     }
 
-    inner class FrameBufferMetaData{
+    inner class RTEFrameBufferEntry(dataSize:Int){
         /** the following are only modified at dequeue */
         // Frame ID
         var fid:Long = -1
@@ -53,6 +57,13 @@ class RTEFrameReceiveBuffer(val slotCount:Int, val slotSize:Int) {
         var totalNumberOfPackets:Long = -1
         // presentation timestamp of this frame
         var presentationTimestamp:Long = -1
+
+        /** The buffer holding frame data. */
+        var frameBuffer:ByteArray = ByteArray(dataSize)
+
+        init {
+//            frameBuffer.forEach {  }
+        }
 //
 //        volatile uint32_t total_length;
 //        volatile uint32_t total_packet;

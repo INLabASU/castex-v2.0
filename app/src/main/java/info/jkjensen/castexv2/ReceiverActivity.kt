@@ -60,7 +60,7 @@ class ReceiverActivity : AppCompatActivity() {
 
         // Start the task to receive packets. When a packet is received, onData is called with the
         // received UDP packet.
-        packetReceiverTask = PacketReceiverTask(clientSocket = clientSocket, onPacketReady = {p->onData(p)}, tcpSock = tcpSocket)
+        packetReceiverTask = PacketReceiverTask(clientSocket = clientSocket, onPacketReady = { p -> onDataReceived(p) }, tcpSock = tcpSocket)
         packetReceiverTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR)
 
         receiverEditText.addTextChangedListener(object:TextWatcher{
@@ -87,7 +87,13 @@ class ReceiverActivity : AppCompatActivity() {
     }
 
 
-    private fun onData(packet:DatagramPacket){
+    /**
+     * Callback function called when data is received via the packetReceiverTask.
+     * This function does the bulk of the processing for incoming packets.
+     */
+    private fun onDataReceived(packet:DatagramPacket){
         Log.d(TAG, "Called on data with packet!")
+        // TODO: Deserialize packet into RTEPacket
+        // TODO: Add newly created RTEPacket to RTEFrameReceiveBuffer for the renderer to pick it up.
     }
 }

@@ -21,6 +21,18 @@ data class RTEPacket(var header: RTEPacketHeader = RTEPacketHeader(),
 
     companion object {
         const val TAG = "RTEPacket"
+
+
+        /**
+         * Reconstructs a packet object from the given ByteArray.
+         */
+        fun deserialize(buffer:ByteArray):RTEPacket{
+            val retPacket = RTEPacket()
+
+//            retPacket.header.magic =
+
+            return retPacket
+        }
     }
 
     /**

@@ -36,8 +36,7 @@ class PacketReceiverTask constructor(private var clientSocket: DatagramSocket? =
 
     override fun doInBackground(vararg strings: String): String {
         // Continuously receive packets and put them on a priorityqueue
-        while (true) {
-            if (this.isCancelled) return ""
+        while (!this.isCancelled) {
             try {
                 val buff = ByteArray(100535)
                 dPacket = DatagramPacket(buff, 100535)
@@ -70,6 +69,7 @@ class PacketReceiverTask constructor(private var clientSocket: DatagramSocket? =
             }
 
         }
+        return ""
     }
 
     override fun onCancelled(result: String?) {
