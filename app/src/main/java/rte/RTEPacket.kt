@@ -1,6 +1,7 @@
 package rte
 
 import java.io.ByteArrayOutputStream
+import java.math.BigInteger
 import java.util.*
 
 /**
@@ -8,15 +9,14 @@ import java.util.*
  * This class represents a packet according to the RTE Protocol.
  */
 data class RTEPacket(var header: RTEPacketHeader = RTEPacketHeader(),
-                     var fid:Int = -1,
-                     var totalLength:Int = -1,
+                     var fid:Long = -1,
+                     var totalLength:Long = -1,
                      var pid:Int = -1,
-                     var totalPackets:Int = -1,
+                     var totalPackets:Long = -1,
                      var offset:Int = -1,
                      var length:Int = -1,
-                     // TODO: Change timestamp and flag (both 64 bit unsigned) to a larger type to allow for the full 64 bits.
-                     var timestamp:Long = -1,
-                     var flag:Long = -1,
+                     var timestamp:BigInteger = BigInteger.valueOf(-1),
+                     var flag:BigInteger = BigInteger.valueOf(-1),
                      var data: ByteArray = ByteArray(0)) {
 
     companion object {
@@ -110,28 +110,30 @@ data class RTEPacket(var header: RTEPacketHeader = RTEPacketHeader(),
                 ((this.length shr 24) and 0xFF).toByte()
         ))
 
-        // Timestamp of this frame
+        // Timestamp of this frame. Could possibly fix this to be faster by separating the 64-bit
+        // BigInteger into top half and bottom half instead of calling .toInt() every time.
         outputStream.write(byteArrayOf(
-                (this.timestamp and 0xFF).toByte(),
-                ((this.timestamp shr 8) and 0xFF).toByte(),
-                ((this.timestamp shr 16) and 0xFF).toByte(),
-                ((this.timestamp shr 24) and 0xFF).toByte(),
-                ((this.timestamp shr 32) and 0xFF).toByte(),
-                ((this.timestamp shr 40) and 0xFF).toByte(),
-                ((this.timestamp shr 48) and 0xFF).toByte(),
-                ((this.timestamp shr 56) and 0xFF).toByte()
+                (this.timestamp.toInt() and 0xFF).toByte(),
+                ((this.timestamp shr 8).toInt() and 0xFF).toByte(),
+                ((this.timestamp shr 16).toInt() and 0xFF).toByte(),
+                ((this.timestamp shr 24).toInt() and 0xFF).toByte(),
+                ((this.timestamp shr 32).toInt() and 0xFF).toByte(),
+                ((this.timestamp shr 40).toInt() and 0xFF).toByte(),
+                ((this.timestamp shr 48).toInt() and 0xFF).toByte(),
+                ((this.timestamp shr 56).toInt() and 0xFF).toByte()
         ))
 
-        // Flag for this packet.
+        // Flag for this packet. Could possibly fix this to be faster by separating the 64-bit
+        // BigInteger into top half and bottom half instead of calling .toInt() every time.
         outputStream.write(byteArrayOf(
-                (this.flag and 0xFF).toByte(),
-                ((this.flag shr 8) and 0xFF).toByte(),
-                ((this.flag shr 16) and 0xFF).toByte(),
-                ((this.flag shr 24) and 0xFF).toByte(),
-                ((this.flag shr 32) and 0xFF).toByte(),
-                ((this.flag shr 40) and 0xFF).toByte(),
-                ((this.flag shr 48) and 0xFF).toByte(),
-                ((this.flag shr 56) and 0xFF).toByte()
+                (this.flag.toInt() and 0xFF).toByte(),
+                ((this.flag shr 8).toInt() and 0xFF).toByte(),
+                ((this.flag shr 16).toInt() and 0xFF).toByte(),
+                ((this.flag shr 24).toInt() and 0xFF).toByte(),
+                ((this.flag shr 32).toInt() and 0xFF).toByte(),
+                ((this.flag shr 40).toInt() and 0xFF).toByte(),
+                ((this.flag shr 48).toInt() and 0xFF).toByte(),
+                ((this.flag shr 56).toInt() and 0xFF).toByte()
         ))
 
         // Payload data
@@ -166,10 +168,10 @@ data class RTEPacket(var header: RTEPacketHeader = RTEPacketHeader(),
 
     override fun hashCode(): Int {
         var result = header.hashCode()
-        result = 31 * result + fid
-        result = 31 * result + totalLength
+        result = (31 * result + fid).toInt()
+        result = (31 * result + totalLength).toInt()
         result = 31 * result + pid
-        result = 31 * result + totalPackets
+        result = (31 * result + totalPackets).toInt()
         result = 31 * result + offset
         result = 31 * result + length
         result = 31 * result + timestamp.hashCode()

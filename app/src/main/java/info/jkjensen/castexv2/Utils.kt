@@ -6,6 +6,7 @@ import android.util.Log
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
+import java.math.BigInteger
 import java.util.*
 
 /**
@@ -36,3 +37,6 @@ fun ByteArrayOutputStream.printDump(){
             .forEach { ss.append(it) }
     Log.d("OutputStream.dump", "Bytes: " + ss.toString())
 }
+
+fun Long.toBigInteger() = BigInteger.valueOf(this)
+fun Int.toBigInteger() = BigInteger.valueOf(toLong())

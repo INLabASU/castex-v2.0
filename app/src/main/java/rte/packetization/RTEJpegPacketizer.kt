@@ -21,7 +21,7 @@ open class RTEJpegPacketizer(session:RTESession): RTEPacketizer(), Runnable{
     }
 
     // Image FIFO buffer for capture -> stream
-    var images:ArrayList<RTEFrame> = arrayListOf()
+    private var images:ArrayList<RTEFrame> = arrayListOf()
     private var session:RTESession? = null
     /* Tracks the previous bitmap displayed so that it may be recycled immediately when it is no
     longer needed */
@@ -88,7 +88,7 @@ open class RTEJpegPacketizer(session:RTESession): RTEPacketizer(), Runnable{
 
             var pid = 0 // Packet ID for this frame.
             var offset = 0 // Offset of the current packet within this frame.
-            var frameSize = outputData.size
+            val frameSize = outputData.size
             var bytesRemaining = frameSize // The remaining number of bytes left to send
             var packetLength = if (bytesRemaining >= packetSize) packetSize else bytesRemaining
 
@@ -99,11 +99,11 @@ open class RTEJpegPacketizer(session:RTESession): RTEPacketizer(), Runnable{
                 packet.header.type = session!!.videoType!!
 
                 packet.fid = rteFrame.fid
-                packet.totalLength = frameSize
+                packet.totalLength = frameSize.toLong()
                 packet.pid = pid
                 // Number of packets is equal to the ratio of frame size to packet size plus an
                 // additional packet if there is a remainder.
-                packet.totalPackets = (frameSize / packetSize) + (if (frameSize % packetSize > 0) 1 else 0)
+                packet.totalPackets = ((frameSize / packetSize) + (if (frameSize % packetSize > 0) 1 else 0)).toLong()
                 packet.offset = offset
                 packet.length = packetLength
                 packet.timestamp = rteFrame.timestamp

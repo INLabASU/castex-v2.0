@@ -13,6 +13,7 @@ import rte.RTEPacket
 import rte.RTEProtocol
 import rte.session.RTESession
 import java.io.IOException
+import java.math.BigInteger
 import java.net.DatagramPacket
 
 /**
@@ -34,7 +35,7 @@ class RTEH264Packetizer(session:RTESession): RTEPacketizer(), Runnable {
     private var sps: ByteArray? = null
     private var pps:ByteArray? = null
     private var packetSize: Int = 0
-    private var fid: Int = 0
+    private var fid: Long = 0
 
     //A STAP-A NAL (NAL type 24) containing the sps and pps of the stream
     private var stapa: ByteArray? = null
@@ -255,14 +256,14 @@ class RTEH264Packetizer(session:RTESession): RTEPacketizer(), Runnable {
                 packet.header.type = session.videoType!!
 
                 packet.fid = this.fid
-                packet.totalLength = frameSize
+                packet.totalLength = frameSize.toLong()
                 packet.pid = pid
                 // Number of packets is equal to the ratio of frame size to packet size plus an
                 // additional packet if there is a remainder.
-                packet.totalPackets = (frameSize / packetSize) + (if (frameSize % packetSize > 0) 1 else 0)
+                packet.totalPackets = ((frameSize / packetSize) + (if (frameSize % packetSize > 0) 1 else 0)).toLong()
                 packet.offset = offset
                 packet.length = packetLength
-                packet.timestamp = System.nanoTime() / 1000 // TODO: See if setting this earlier improves performance
+                packet.timestamp = BigInteger.valueOf(System.nanoTime() / 1000) // TODO: See if setting this earlier improves performance
 
                 val outData = ByteArray(packetLength)
                 System.arraycopy(buffer, offset, outData, 0, packetLength)
