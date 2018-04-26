@@ -3,30 +3,62 @@ package rte
 import java.nio.ByteBuffer
 
 
-class RTEFrameReceiveBuffer(val slotCount:Int, val slotSize:Int) {
+/**
+ * A 2D frame buffer for storing frames that have been decoded. Supports partial frames and frame
+ * timeout.
+ *
+ */
+class RTEFrameReceiveBuffer(val slotCount:Int, val slotSize:Int, val frameTimeout:Int, val maxSize:Int = 5) {
 
     val map = mutableMapOf<Int, ByteArray>() // https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-map/index.html
-    val buf:MutableList<RTEFrameBufferEntry> = mutableListOf()
+    val frameList:MutableList<RTEFrameBufferEntry> = mutableListOf()
 
-    var requiresInit = true
-    var startTime:Long = -1
+    var initialized = false
+    var firstTimestamp:Long = -1
+    var renderTimestamp:Long = -1
 
-    init{
-
+    /**
+     * Record the timestamp from the first packet and the current timestamp as the starting time
+     * for buffering.
+     */
+    fun startEngine(timestamp:Long){
+        firstTimestamp = timestamp
+        renderTimestamp = System.currentTimeMillis()
+        initialized = true
+        this.empty()
     }
 
     /**
      * Add a packet to the buffer.
      */
     fun enqueue(packet:RTEPacket){
+        if(frameList.any{ it.fid == packet.fid }){
+            // If the frame already has an entry in the buffer then just add this packet to it.
+            val frameEntry:RTEFrameBufferEntry = frameList.first{ it.fid == packet.fid }
+            // Insert the packet data at the offset given.
+            frameEntry.frameBuffer.put(packet.data, packet.offset, packet.length)
+        } else {
+            val frameEntry = RTEFrameBufferEntry(slotSize, packet.fid, packet.timestamp,
+                    packet.totalLength, packet.totalPackets)
+            // Insert the packet data at the offset given.
+            frameEntry.frameBuffer.put(packet.data, packet.offset, packet.length)
 
+            frameList.add(frameEntry)
+        }
     }
 
     /**
      * Remove the most recent ready frame.
      */
-    fun dequeue():RTEPacket{
-        return RTEPacket()
+    fun dequeue():ByteBuffer?{
+        // Synchronize the buffer so any expired frames are removed.
+        syncUp()
+        // If the frame is not yet ready, don't return it yet.
+        if(!nextFrameReady()) return null
+
+        val frameOut = frameList.removeAt(0)
+
+        return frameOut.frameBuffer
     }
 
     /**
@@ -43,33 +75,42 @@ class RTEFrameReceiveBuffer(val slotCount:Int, val slotSize:Int) {
         return false
     }
 
-    inner class RTEFrameBufferEntry(dataSize:Int){
+    fun empty(){
+        frameList.clear()
+    }
+
+    inner class RTEFrameBufferEntry(dataSize:Int,
+                                    var fid:Long,
+                                    var presentationTimestamp:Long,
+                                    var totalLength:Long,
+                                    var totalNumberOfPackets:Long){
         /** the following are only modified at dequeue */
-        // Frame ID
-        var fid:Long = -1
         // Flag denoting enqueue/dequeue operation
         var slotFlag:Long = -1
 
-        /** the following are only modified at enqueue */
-        // total length of this frame in transmission in byte
-        var totalLength:Long = -1
-        // total number of packets in this frame
-        var totalNumberOfPackets:Long = -1
-        // presentation timestamp of this frame
-        var presentationTimestamp:Long = -1
-
         /** The buffer holding frame data. */
-        var frameBuffer:ByteArray = ByteArray(dataSize)
+        var frameBuffer:ByteBuffer = ByteBuffer.allocate(dataSize)
 
-        init {
-//            frameBuffer.forEach {  }
+        fun addPacket(packet:RTEPacket){
+            presentationTimestamp = packet.timestamp
         }
-//
-//        volatile uint32_t total_length;
-//        volatile uint32_t total_packet;
-//        volatile ts_t timestamp;
-//
-//        volatile uint8_t bitmap[MAX_PACKETS_PER_FRAME / 8]; 		// packet bitmap, assume at most 128 * 8 = 1024 packets in a frame
+
+        fun isExpired():Boolean{
+            if(!initialized) return false
+
+            if(this.presentationTimestamp < 0) return false
+            return false
+        }
+
+        fun isComplete():Boolean{
+            if(!initialized) return false
+            return false
+        }
+
+        fun isSynchronized():Boolean{
+            if(!initialized) return false
+            return false
+        }
 
     }
 }
