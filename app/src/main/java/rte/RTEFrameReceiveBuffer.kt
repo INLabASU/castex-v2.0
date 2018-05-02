@@ -1,5 +1,6 @@
 package rte
 
+import java.math.BigInteger
 import java.nio.ByteBuffer
 
 
@@ -81,7 +82,7 @@ class RTEFrameReceiveBuffer(val slotCount:Int, val slotSize:Int, val frameTimeou
 
     inner class RTEFrameBufferEntry(dataSize:Int,
                                     var fid:Long,
-                                    var presentationTimestamp:Long,
+                                    var presentationTimestamp:BigInteger,
                                     var totalLength:Long,
                                     var totalNumberOfPackets:Long){
         /** the following are only modified at dequeue */
@@ -98,7 +99,7 @@ class RTEFrameReceiveBuffer(val slotCount:Int, val slotSize:Int, val frameTimeou
         fun isExpired():Boolean{
             if(!initialized) return false
 
-            if(this.presentationTimestamp < 0) return false
+            if(this.presentationTimestamp < BigInteger.ZERO) return false
             return false
         }
 

@@ -263,7 +263,7 @@ class RTEH264Packetizer(session:RTESession): RTEPacketizer(), Runnable {
                 packet.totalPackets = ((frameSize / packetSize) + (if (frameSize % packetSize > 0) 1 else 0)).toLong()
                 packet.offset = offset
                 packet.length = packetLength
-                packet.timestamp = BigInteger.valueOf(System.nanoTime() / 1000) // TODO: See if setting this earlier improves performance
+                packet.timestamp = BigInteger.valueOf(System.nanoTime() / 1000000) // TODO: See if setting this earlier improves performance
 
                 val outData = ByteArray(packetLength)
                 System.arraycopy(buffer, offset, outData, 0, packetLength)
