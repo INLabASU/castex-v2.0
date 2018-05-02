@@ -175,11 +175,17 @@ class RTEH264Packetizer(session:RTESession): RTEPacketizer(), Runnable {
 //            buffer = socket.requestBuffer()
 //            buffer[rtphl] = header[4]
             sendBuffer = ByteArray(naluLength)
-            val len = fill(sendBuffer!!, 0, naluLength - 1)
+            System.arraycopy(header, 0, sendBuffer, 0, header.size)
+            val len = fill(sendBuffer!!, header.size, naluLength - 1)
 //            socket.updateTimestamp(ts)
 //            socket.markNextPacket()
 //            super.send(naluLength + rtphl)
             //Log.d(TAG,"----- Single NAL unit - len:"+len+" delay: "+delay);
+            val dGramPackets = getPackets(sendBuffer!!)
+            // Send out frames on UDP socket.
+            for (p in dGramPackets) {
+                session.vSock!!.send(p)
+            }
         } else {  // Large NAL unit => Split nal unit
 
 //            // Set FU-A header
@@ -194,10 +200,16 @@ class RTEH264Packetizer(session:RTESession): RTEPacketizer(), Runnable {
 //                buffer = socket.requestBuffer()
                 val bufSize = (if (naluLength - sum > RTEProtocol.MAX_PACKET_SIZE) RTEProtocol.MAX_PACKET_SIZE else naluLength - sum)
                 sendBuffer = ByteArray(bufSize)
+                var len = 0
+                if(sum == 1){
+                    System.arraycopy(header, 0, sendBuffer, 0, header.size)
+                    len = fill(sendBuffer!!, header.size, bufSize)
+                }else{
+                    len = fill(sendBuffer!!, 0, bufSize)
+                }
 //                buffer[rtphl] = header[0]
 //                buffer[rtphl + 1] = header[1]
 //                socket.updateTimestamp(ts)
-                val len = fill(sendBuffer!!, 0, bufSize)
                 if (len < 0) return
                 sum += len
 //                // Last packet before next NAL TODO: I think this is an RTP thing/ not necessary at this level.
@@ -210,13 +222,13 @@ class RTEH264Packetizer(session:RTESession): RTEPacketizer(), Runnable {
 //                // Switch start bit
 //                header[1] = (header[1] and 0x7F).toByte()
 //                //Log.d(TAG,"----- FU-A unit, sum:"+sum);
+                val dGramPackets = getPackets(sendBuffer!!)
+                // Send out frames on UDP socket.
+                for (p in dGramPackets) {
+                    session.vSock!!.send(p)
+                }
             }
         }// Large NAL unit => Split nal unit
-        val dGramPackets = getPackets(sendBuffer!!)
-        // Send out frames on UDP socket.
-        for (p in dGramPackets) {
-            session.vSock!!.send(p)
-        }
         fid++
     }
 
